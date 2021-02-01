@@ -1,6 +1,7 @@
 #pragma once
 #include "base/file.h"
 #include "base/nocopyable.h"
+#include "base/singleton.h"
 #include "base/typedef.h"
 
 #include <iostream>
@@ -319,6 +320,59 @@ private:
     WritableFile file_;
 };
 #endif
+
+class _LogFlusherManager {
+public:
+    using MakerFunc = std::function<void(const char* filename)>;
+
+    _LogFlusherManager() {
+        #define LON_XX(name) \
+            flushers_maker_.emplace(#name, [](const char* filename){ return std::make_unique<name>(filename); });
+            LON_XX(SimpleFileFlusher)
+            LON_XX(ProtectedFileFlusher)
+            LON_XX(AsyncFileLogFlusher)
+        #undef LON_XX
+        #define LON_XX(name) \
+            flushers_maker_.emplace(#name, [](const char* filename){ return std::make_unique<name>(); });
+            LON_XX(SimpleStdoutFlusher)
+            LON_XX(ProtectedStdoutFlusher)
+            LON_XX(AsyncStdoutLogFlusher)
+        #undef LON_XX
+    }
+    /**
+     * @brief Get the Log Flusher object
+     * 
+     * @param key 大小写不敏感
+     * @return std::unique_ptr<LogFlusher> LogFlusher的指针
+     */
+    std::unique_ptr<LogFlusher> getLogFlusher(const String& key) {
+        String convert;
+        std::transform(key.begin(), key.end(), std::back_inserter(convert), ::toupper);
+        if(auto iter = flushers_maker_.find(convert); iter != flushers_maker_.end()) return iter->second();
+        return nullptr;
+    }
+
+    /**
+     * @brief 注册Flusher的生成器
+     * 
+     * @param key 大小写不敏感
+     * @param func 生成器函数
+     * @return true 注册成功
+     * @return false 内部有同名key, 注册失败
+     */
+    bool rigisterFlushMaker(const String& key, MakerFunc func) {
+        if(auto iter = flushers_maker_.find(key); iter != flushers_maker_.end()) return false;
+        String convert;
+        std::transform(key.begin(), key.end(), std::back_inserter(convert), ::toupper);
+        flushers_maker_.emplace(key, std::move(func));
+    }
+
+private:
+    std::unordered_map<String, MakerFunc> flushers_maker_;
+};
+
+
+using LogFlusherManager = Singleton<_LogFlusherManager>;
 
 }
 
