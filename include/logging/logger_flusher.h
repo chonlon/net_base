@@ -202,7 +202,7 @@ private:
 
 class AsyncStdoutLogFlusher : public AsyncFlusher
 {
-private:
+public:
     AsyncStdoutLogFlusher() {
         thread_ = Thread([this]()
         {
@@ -226,7 +226,7 @@ private:
         condition_var_.notify_one();
         thread_.join();
     }
-
+private:
     void doFlush() override {
         std::lock_guard<Mutex> locker{mutex_};
         while (!log_pool_.empty()) {
@@ -323,7 +323,7 @@ private:
 
 class _LogFlusherManager {
 public:
-    using MakerFunc = std::function<void(const char* filename)>;
+    using MakerFunc = std::function<std::unique_ptr<LogFlusher>(const char* filename)>;
 
     _LogFlusherManager() {
         #define LON_XX(name) \
@@ -345,10 +345,10 @@ public:
      * @param key 大小写不敏感
      * @return std::unique_ptr<LogFlusher> LogFlusher的指针
      */
-    std::unique_ptr<LogFlusher> getLogFlusher(const String& key) {
+    std::unique_ptr<LogFlusher> getLogFlusher(const String& key, const char* filename) {
         String convert;
         std::transform(key.begin(), key.end(), std::back_inserter(convert), ::toupper);
-        if(auto iter = flushers_maker_.find(convert); iter != flushers_maker_.end()) return iter->second();
+        if(auto iter = flushers_maker_.find(convert); iter != flushers_maker_.end()) return iter->second(filename);
         return nullptr;
     }
 

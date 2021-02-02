@@ -53,10 +53,12 @@ message(STATUS "CXX_FLAGS = " ${CMAKE_CXX_FLAGS} " " ${CMAKE_CXX_FLAGS_${BUILD_T
 
 
 find_package(fmt CONFIG REQUIRED)
+find_package(yaml-cpp CONFIG REQUIRED)
 
 set(
     NET_BASE_SRC
     src/logger.cpp
+    src/config.cpp
     src/base/info.cpp
     src/logging/logger_formatters.cpp
 )
@@ -65,6 +67,7 @@ set(
     NET_BASE_LIB
     fmt::fmt
     fmt::fmt-header-only
+    yaml-cpp
     pthread
 )
 

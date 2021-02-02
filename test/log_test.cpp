@@ -6,24 +6,24 @@
 using namespace lon;
 
 TEST(LogTest, LogLeveltoString) {
-    EXPECT_STREQ(Logger::levelToString(Logger::Level::DEBUG),
+    EXPECT_STREQ(Logger::levelToString(Level::DEBUG),
         "DEBUG");
-    EXPECT_STREQ(Logger::levelToString(Logger::Level::WARN),
+    EXPECT_STREQ(Logger::levelToString(Level::WARN),
         "WARN");
-    EXPECT_STREQ(Logger::levelToString(Logger::Level::INFO),
+    EXPECT_STREQ(Logger::levelToString(Level::INFO),
         "INFO");
-    EXPECT_STREQ(Logger::levelToString(Logger::Level::ERROR),
+    EXPECT_STREQ(Logger::levelToString(Level::ERROR),
         "ERROR");
-    EXPECT_STREQ(Logger::levelToString(Logger::Level::FATAL),
+    EXPECT_STREQ(Logger::levelToString(Level::FATAL),
         "FATAL");
 
 
-    EXPECT_EQ(Logger::levelFromString("debug"), Logger::Level::DEBUG);
-    EXPECT_EQ(Logger::levelFromString("Warn"), Logger::Level::WARN);
-    EXPECT_EQ(Logger::levelFromString("InFo"), Logger::Level::INFO);
-    EXPECT_EQ(Logger::levelFromString("ERrOr"), Logger::Level::ERROR);
-    EXPECT_EQ(Logger::levelFromString("FATAL"), Logger::Level::FATAL);
-    EXPECT_EQ(Logger::levelFromString("wrong"), Logger::Level::SIZE);
+    EXPECT_EQ(Logger::levelFromString("debug"), Level::DEBUG);
+    EXPECT_EQ(Logger::levelFromString("Warn"), Level::WARN);
+    EXPECT_EQ(Logger::levelFromString("InFo"), Level::INFO);
+    EXPECT_EQ(Logger::levelFromString("ERrOr"), Level::ERROR);
+    EXPECT_EQ(Logger::levelFromString("FATAL"), Level::FATAL);
+    EXPECT_EQ(Logger::levelFromString("wrong"), Level::SIZE);
 
 }
 
