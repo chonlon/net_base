@@ -60,6 +60,7 @@ set(
     src/logger.cpp
     src/config.cpp
     src/base/info.cpp
+    src/base/string_piece.cpp
     src/logging/logger_formatters.cpp
 )
 

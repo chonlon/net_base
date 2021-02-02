@@ -2,64 +2,146 @@
 
 #include "base/macro.h"
 #include "base/typedef.h"
+#include "config/config_exception.h"
+#include "logger.h"
 
-
+#include <iostream>
 #include <any>
 #include <unordered_map>
+#include <fmt/core.h>
+#include <yaml-cpp/exceptions.h>
 #include <yaml-cpp/node/node.h>
+#include <yaml-cpp/node/parse.h>
 
-namespace lon
-{
+namespace lon {
 // 两种方案, 如果是想用继承, 那么get函数不能是模板函数, 也就是说要么返回值是void*, 要么抽象返回值, 要么使用any(其实还是void*)
 // 另一种就是采用类似contract的方式, 当然对于c++17并不能限制满足这样的约定, 需要主动满足这样的约定, 具体就是这些类采样相同的api
-// 这里采用第一种方案
+// 第一种方案看起来很美好, 实现起来还是颇有难度的, 比如yaml::node.as<>需要提供类型, 而我们的虚函数是不能应付这样的可变类型的
+// 所以采用第二种方案
 
-// 采用const指针的原因是: 如果没有程序中设置配置文件的需求的话, 直接使用const raw指针返回就不需要考虑多线程同步问题, 也不需要加锁.
-// 如果有需求的话, getImpl可能需要使用any来返回shared_ptr了(多线程需要考虑不同线程掌握指针的生命周期, 可能出现空悬指针), 也需要加锁.
+// 采用值方式提供结果
+// 原因是值方式+不会修改文件就是线程安全的
+// 另外配置读取的大多是比较小的值, copy的开销很小.
 
-    class Config{
-    public:
-        template <typename T>
-        const T* get(const String& key) const {
-            return static_cast<T*>(getImpl(key));
-        }
+class ConfigBase
+{
+public:
 
-        template <typename T>
-        const T* getIfExists(const String& key, T default_value) const {
-            T* result = nullptr;
-            try {
-                result = get(key);
-            } catch (...) {//TODO use NO_EXISTS EXCEPTION
-                miss_map_.insert({key, default_value});
-                return &(std::any_cast<T>(miss_map_[key]));
+    virtual ~ConfigBase() = default;
+protected:
+    std::unordered_map<String, std::any> miss_map_;
+    // store in miss_map_ means not found at file loaded;
+};
+
+class JsonConfig : public ConfigBase
+{
+public:
+    ~JsonConfig() override;
+protected:
+private:
+    void loadFromNode();
+};
+
+class YamlConfig : public ConfigBase
+{
+public:
+    ~YamlConfig() override {
+    }
+
+
+    YamlConfig(const char* filename)
+        : node_{YAML::LoadFile(filename)} {
+
+    }
+
+    /**
+     * \brief 获取指定key的值
+     * \tparam T return type
+     * \param key
+     * \exception KeyNotFound if key not exists.
+     * \exception ConvertFailed if convert to target type failed.
+     * \return T if exists
+     */
+    template <typename T>
+    T get(const String& key) const {
+        if (auto iter = miss_map_.find(key); iter != miss_map_.end())
+            return std::any_cast<T>(iter->second);
+        auto keys = splitStringPiece(key, ".");
+
+        YAML::Node node;
+        try
+        {// 本来是想用下面注释的循环查找的方式的, 但是yaml-cpp的值拷贝会改变Yaml::Node的值..., 所以只好这么做了, 不过效率应该是一样的.
+            switch (keys.size()) {
+                case 0:
+                    throw config::KeyNotFound(fmt::format("key:{}", key));
+                case 1:
+                    node = node_[String(keys[0])];
+                    break;
+                case 2:
+                    node = node_[String(keys[0])][String(keys[1])];
+                    break;
+                case 3:
+                    node = node_[String(keys[0])][String(keys[1])][String(
+                        keys[2])];
+                    break;
+                case 4:
+                    node = node_[String(keys[0])][String(keys[1])][
+                        String(keys[2])][String(keys[3])];
+                    break;
+                case 5:
+                    node = node_[String(keys[0])][String(keys[1])][
+                        String(keys[2])][String(keys[3])][String(keys[4])];
+                    break;
+                default:
+                    std::cerr << "too deep\n";
+                    break;
             }
+
+            // for (auto& _key : keys) {
+            //     if (current.IsNull()) {
+            //         throw config::KeyNotFound(fmt::format("key:{}", key));
+            //     }
+
+            //     current = current[String(_key)];
+            // }
+        } catch(YAML::InvalidNode&) {
+            throw config::KeyNotFound(fmt::format("key:{}", key));
+        }
+        if (node.IsNull()) {
+            throw config::KeyNotFound(fmt::format("key:{}", key));
         }
 
-        virtual ~Config() = 0;
-    protected:
-        LON_NODISCARD virtual const void* getImpl(const String& key) const  = 0;
-        std::unordered_map<String, std::any> miss_map_; // store in miss_map_ means not found at file loaded;
-    };
+        try {
+            return node.as<T>();
+        } catch (YAML::BadConversion& e) {
+            throw config::ConvertFailed(
+                fmt::format("key:{}, type:{}", key, typeid(T).name()));
+        }
+    }
 
-    class JsonConfig : public Config {
-    public:
-        ~JsonConfig() override;
-    protected:
-        LON_NODISCARD const void*
-        getImpl(const String& key) const override;
-    private:
-        void loadFromNode();
-    };
+    /**
+     * \brief 获取指定key的值, 如果不存在返回默认值
+     * \tparam T return type
+     * \param key
+     * \param default_value 默认值
+     * \exception ConvertFailed if convert to target type failed.
+     * \return key在配置文件中对应值, 如果不存在返回默认值
+     */
+    template <typename T>
+    T getIfExists(const String& key, T default_value) {
+        try {
+            return get<T>(key);
+        } catch (config::KeyNotFound&) {
+            miss_map_[key] = default_value;
+            return std::any_cast<T>(miss_map_.at(key));
+        } catch (...) {
+            throw;
+        }
+    }
 
-    class YamlConfig : public Config {
-    public:
-        ~YamlConfig() override;
-    protected:
-        LON_NODISCARD const void*
-        getImpl(const String& key) const override;
-    private:
-        void loadFromNode();
-    private:
-        YAML::Node node_;
-    };
+private:
+    void loadFromNode();
+private:
+    YAML::Node node_;
+};
 } // namespace lon

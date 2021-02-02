@@ -52,13 +52,6 @@ LogWrapper::~LogWrapper() {
     }
 }
 
-static int count =0;
-struct __Runner
-{
-    ~__Runner() { fmt::print("count: {}", count); }
-};
-__Runner run;
-
 void Logger::log(LogEvent event) noexcept {
     StringStream ss;
     event.logger_name      = name_;
@@ -69,7 +62,6 @@ void Logger::log(LogEvent event) noexcept {
     for (int i = 0; i < flusher_count_; ++i) {
         flushers_[i]->flush(ss.str());
     }
-    ++count;
 }
 
 void Logger::registerUpdateFlusher() const {
