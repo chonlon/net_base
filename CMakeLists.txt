@@ -54,6 +54,7 @@ message(STATUS "CXX_FLAGS = " ${CMAKE_CXX_FLAGS} " " ${CMAKE_CXX_FLAGS_${BUILD_T
 
 find_package(fmt CONFIG REQUIRED)
 find_package(yaml-cpp CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 set(
     NET_BASE_SRC
@@ -69,6 +70,8 @@ set(
     fmt::fmt
     fmt::fmt-header-only
     yaml-cpp
+    nlohmann_json
+    nlohmann_json::nlohmann_json
     pthread
 )
 

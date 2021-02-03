@@ -45,14 +45,14 @@ T get(const lon::String& key, YAML::Node node_)  {
     }
 }
 
-void raw() {
-    CaseMarker marker{"raw"};
+void raw_yaml() {
+    CaseMarker marker{"raw_yaml"};
     auto root = YAML::LoadFile("bin/conf/test.yml");
     std::cout << root["system"]["port"].as<int>();
     fmt::print("{}\n", root["system"]["int_vec"].as<std::vector<int>>());
 }
 void raw2() {
-    CaseMarker marker{"raw"};
+    CaseMarker marker{"raw_2"};
     auto root = YAML::LoadFile("bin/conf/test.yml");
     fmt::print("{}\n", get<int>("system.port", root));
 
@@ -62,18 +62,28 @@ void raw2() {
 }
 
 void yamlConfig() {
-    CaseMarker marker{"config"};
-    lon::YamlConfig config("bin/conf/test.yml");
+    CaseMarker marker{"yaml-config"};
+    lon::YamlConfig config("conf/test.yml");
     fmt::print("{}\n", config.get<int>("system.port"));
     fmt::print("{}\n", config.get<std::vector<int>>("system.int_vec"));
+    fmt::print("{}\n", config.getIfExists<int>("__not_exists_key", 100));
+    fmt::print("{}\n", config.get<int>("__not_exists_key"));
+}
+struct unkonw{};
+void jsonConfig() {
+    CaseMarker marker{ "json-config" };
+    lon::JsonConfig config("conf/test.json");
+    fmt::print("{}\n", config.get<int>("system.port"));
+    fmt::print("{}\n", config.get<std::vector<int>>("system.int_vec"));
+    fmt::print("{}\n", config.get<std::map<std::string,int>>("system.str_int_map"));
     fmt::print("{}\n", config.getIfExists<int>("__not_exists_key", 100));
     fmt::print("{}\n", config.get<int>("__not_exists_key"));
 }
 
 
 int main() {
-    raw();
+    raw_yaml();
     // raw2();
     yamlConfig();
-
+    jsonConfig();
 }
