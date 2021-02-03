@@ -25,6 +25,12 @@ namespace lon {
 // 原因是值方式+不会修改文件就是线程安全的
 // 另外配置读取的大多是比较小的值, copy的开销很小.
 
+namespace detail {
+    struct YamlConfigLoader;
+
+    struct JsonConfigLoader;
+}
+
 class ConfigBase
 {
 public:
@@ -37,6 +43,7 @@ protected:
 
 class JsonConfig : public ConfigBase
 {
+friend detail::JsonConfigLoader;
 using json=nlohmann::json;
 public:
     ~JsonConfig() override {}
@@ -98,12 +105,16 @@ public:
         }
     }
 private:
+    JsonConfig(String str) {
+        json_object_ = json::parse(str);
+    }
 
     json json_object_;
 };
 
 class YamlConfig : public ConfigBase
 {
+friend detail::YamlConfigLoader;
 public:
     ~YamlConfig() override {
     }
@@ -202,15 +213,25 @@ public:
     }
 
 private:
+    YamlConfig(String str) : node_{YAML::Load(str)}{  }
+
     YAML::Node node_;
 };
 
-// class _ConfigManager
-// {
-// public:
-//     template<typename T>
-//     static  getConfig(const String& key, const char*filename) {
-//         
-//     }
-// };
+namespace detail {
+    struct YamlConfigLoader
+    {
+        YamlConfigLoader(String str);
+        YamlConfig config;
+    };
+
+    struct JsonConfigLoader
+    {
+        JsonConfigLoader(String str);
+        JsonConfig config;
+    };
+
+}
+
+
 } // namespace lon

@@ -4,6 +4,7 @@ find_package(GTest CONFIG REQUIRED)
 set(
 	TESTS
 	log_test.cpp
+	config_test.cpp
 )
 
 configure_file("../bin/conf/test.yml" "${EXECUTABLE_OUTPUT_PATH}/conf/test.yml" COPYONLY)
