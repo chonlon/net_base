@@ -11,7 +11,7 @@ public:
     ~Singleton() = delete;
 
 
-    static Singleton* getInstance() {
+    static T* getInstance() {
         static T instance;
         return &instance;
     }

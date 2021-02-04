@@ -18,7 +18,6 @@
         lon::LogWrapper(logger, lon::LogEvent( __FILE__, __LINE__, level, lon::getThreadId(), \
                 0, lon::getFiberId(), time(0)/*,lon::getThreadName()*/)).stream
 
-
 #define LON_LOG_DEBUG(logger) LON_LOG(logger, lon::Level::DEBUG)
 #define LON_LOG_INFO(logger) LON_LOG(logger, lon::Level::INFO)
 #define LON_LOG_WARN(logger) LON_LOG(logger, lon::Level::WARN)
@@ -29,6 +28,10 @@ namespace lon {
 constexpr int flusher_max   = 10;
 class LogFlusher;
 class Logger;
+namespace detail {
+    void initDefaultLogger();
+    void initLoggerFromConfig();
+}
 
 enum Level
 {
@@ -97,6 +100,8 @@ public:
 
 class Logger : public std::enable_shared_from_this<Logger>
 {
+    friend void detail::initDefaultLogger();
+    friend void detail::initLoggerFromConfig();
 public:
     using StringStream = std::stringstream;
     using ptr = std::shared_ptr<Logger>;
@@ -115,6 +120,10 @@ public:
         addOneFlusher(flusher3);
         AsyncFileLogFlusher* flusher4 = new AsyncFileLogFlusher{ "/tmp/log3.txt" };
         addOneFlusher(flusher4);
+    }
+
+    Logger(const String& name) : name_{name} {
+        
     }
 
     inline static const char* levelToString(Level level) noexcept {
@@ -159,6 +168,29 @@ private:
     std::array<std::unique_ptr<LogFlusher>, flusher_max> flushers_{nullptr};
     std::vector<FormatterFunc> formatters_{};
 };
+
+
+
+class LogFactory : lon::Noncopyable
+{
+    friend void detail::initDefaultLogger();
+    friend void detail::initLoggerFromConfig();
+public:
+    static Logger::ptr getLogger(const String& key) {
+        if(auto iter = loggers_.find(key); iter!=loggers_.end()) return iter->second;
+        return nullptr;
+    }
+
+    static Logger::ptr getDefault() {
+        return default_logger_;
+    }
+private:
+    static Logger::ptr default_logger_;
+    static std::unordered_map<String, Logger::ptr> loggers_;
+};
+
+
+
 
 
 } // namespace lon

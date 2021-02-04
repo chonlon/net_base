@@ -38,4 +38,12 @@ namespace lon {
     StringPiece getHostName();
 
     String backtraceString(int depth = 10, int skip = 1);
+
+    inline pid_t getPid() {
+        return ::getpid();
+    }
+
+    inline pid_t getUid() {
+        return ::getuid();
+    }
 }

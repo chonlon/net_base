@@ -26,9 +26,9 @@ namespace lon {
 // 另外配置读取的大多是比较小的值, copy的开销很小.
 
 namespace detail {
-    struct YamlConfigLoader;
+struct YamlConfigLoader;
 
-    struct JsonConfigLoader;
+struct JsonConfigLoader;
 }
 
 class ConfigBase
@@ -37,44 +37,47 @@ public:
 
     virtual ~ConfigBase() = default;
 protected:
-    std::unordered_map<String, std::any> miss_map_;
     // store in miss_map_ means not found at file loaded;
+    std::unordered_map<String, std::any> miss_map_;
 };
 
 class JsonConfig : public ConfigBase
 {
-friend detail::JsonConfigLoader;
-using json=nlohmann::json;
+    friend detail::JsonConfigLoader;
+    using json = nlohmann::json;
 public:
-    ~JsonConfig() override {}
+    ~JsonConfig() override {
+    }
+
     JsonConfig(const char* filename) {
         std::ifstream i(filename);
         i >> json_object_;
     }
 
-        /**
-     * \brief 获取指定key的值
-     * \tparam T return type
-     * \param key
-     * \exception KeyNotFound if key not exists.
-     * \exception ConvertFailed if convert to target type failed.
-     * \return T if exists
-     */
+    /**
+    * \brief 获取指定key的值
+    * \tparam T return type
+    * \param key
+    * \exception KeyNotFound if key not exists.
+    * \exception ConvertFailed if convert to target type failed.
+    * \return T if exists
+    */
     template <typename T>
-    T get(const String& key) const { 
+    T get(const String& key) const {
         if (auto iter = miss_map_.find(key); iter != miss_map_.end())
             return std::any_cast<T>(iter->second);
         std::vector<StringPiece> keys = splitStringPiece(key, ".");
 
         const json* obj_pointer = &json_object_;
-        for(auto& _key : keys) {
-            if(auto iter = obj_pointer->find(_key); iter != obj_pointer->end()) {
+        for (auto& _key : keys) {
+            if (auto iter = obj_pointer->find(_key); iter != obj_pointer->end()
+            ) {
                 obj_pointer = &(iter.value());
             } else {
                 throw config::KeyNotFound(fmt::format("key:{}", key));
             }
         }
-        
+
         try {
             return obj_pointer->get<T>();
         } catch (nlohmann::detail::type_error&) {
@@ -95,8 +98,7 @@ public:
     T getIfExists(const String& key, T default_value) {
         try {
             return get<T>(key);
-        }
-        catch (config::KeyNotFound&) {
+        } catch (config::KeyNotFound&) {
             miss_map_[key] = default_value;
             return std::any_cast<T>(miss_map_.at(key));
         }
@@ -104,6 +106,7 @@ public:
             throw;
         }
     }
+
 private:
     JsonConfig(String str) {
         json_object_ = json::parse(str);
@@ -114,7 +117,7 @@ private:
 
 class YamlConfig : public ConfigBase
 {
-friend detail::YamlConfigLoader;
+    friend detail::YamlConfigLoader;
 public:
     ~YamlConfig() override {
     }
@@ -122,7 +125,7 @@ public:
 
     YamlConfig(const char* filename)
         : node_{YAML::LoadFile(filename)} {
-        
+
     }
 
     /**
@@ -141,8 +144,8 @@ public:
 
         // const YAML::Node* node = &node_;
         YAML::Node node;
-        try
-        {// 本来是想用下面注释的循环查找的方式的, 但是yaml-cpp的值拷贝会改变Yaml::Node的值, operator[]返回的又是值类型..., 所以只好这么做了, 不过效率应该是一样的.
+        try {
+            // 本来是想用下面注释的循环查找的方式的, 但是yaml-cpp的值拷贝会改变Yaml::Node的值, operator[]返回的又是值类型..., 所以只好这么做了, 不过效率应该是一样的.
             switch (keys.size()) {
                 case 0:
                     throw config::KeyNotFound(fmt::format("key:{}", key));
@@ -177,7 +180,7 @@ public:
             //
             //     node = &((*node)[String(_key)]);
             // }
-        } catch(YAML::InvalidNode&) {
+        } catch (YAML::InvalidNode&) {
             throw config::KeyNotFound(fmt::format("key:{}", key));
         }
         if (node.IsNull()) {
@@ -213,23 +216,25 @@ public:
     }
 
 private:
-    YamlConfig(String str) : node_{YAML::Load(str)}{  }
+    YamlConfig(String str)
+        : node_{YAML::Load(str)} {
+    }
 
     YAML::Node node_;
 };
 
 namespace detail {
-    struct YamlConfigLoader
-    {
-        YamlConfigLoader(String str);
-        YamlConfig config;
-    };
+struct YamlConfigLoader
+{
+    YamlConfigLoader(String str);
+    YamlConfig config;
+};
 
-    struct JsonConfigLoader
-    {
-        JsonConfigLoader(String str);
-        JsonConfig config;
-    };
+struct JsonConfigLoader
+{
+    JsonConfigLoader(String str);
+    JsonConfig config;
+};
 
 }
 
