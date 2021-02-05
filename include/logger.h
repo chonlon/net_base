@@ -1,22 +1,29 @@
 #pragma once
 
+#include "base/info.h"
 #include "base/string_piece.h"
 #include "base/typedef.h"
-#include "base/info.h"
 #include "logging/logger_flusher.h"
-#include <string>
-#include <sstream>
-#include <functional>
 #include <algorithm>
-#include <assert.h>
-#include <memory>
 #include <array>
+#include <assert.h>
+#include <functional>
+#include <memory>
+#include <sstream>
+#include <string>
 
 
-#define LON_LOG(logger, level) \
-    if(logger->getLevel() <= level) \
-        lon::LogWrapper(logger, lon::LogEvent( __FILE__, __LINE__, level, lon::getThreadId(), \
-                0, lon::getFiberId(), time(0)/*,lon::getThreadName()*/)).stream
+#define LON_LOG(logger, level)                                        \
+    if (logger->getLevel() <= level)                                  \
+    lon::LogWrapper(logger,                                           \
+                    lon::LogEvent(__FILE__,                           \
+                                  __LINE__,                           \
+                                  level,                              \
+                                  lon::getThreadId(),                 \
+                                  0,                                  \
+                                  lon::getFiberId(),                  \
+                                  time(0) /*,lon::getThreadName()*/)) \
+        .stream
 
 #define LON_LOG_DEBUG(logger) LON_LOG(logger, lon::Level::DEBUG)
 #define LON_LOG_INFO(logger) LON_LOG(logger, lon::Level::INFO)
@@ -24,20 +31,25 @@
 #define LON_LOG_ERROR(logger) LON_LOG(logger, lon::Level::ERROR)
 #define LON_LOG_FATAL(logger) LON_LOG(logger, lon::Level::FATAL)
 
-#define LON_LOG_DEFAULT_DEBUG() LON_LOG_DEBUG(LogManager::getInstance()->getDefault())
-#define LON_LOG_DEFAULT_INFO() LON_LOG_INFO(LogManager::getInstance()->getDefault())
-#define LON_LOG_DEFAULT_WARN() LON_LOG_WARN(LogManager::getInstance()->getDefault())
-#define LON_LOG_DEFAULT_ERROR() LON_LOG_ERROR(LogManager::getInstance()->getDefault())
-#define LON_LOG_DEFAULT_FATAL() LON_LOG_FATAL(LogManager::getInstance()->getDefault())
+#define LON_LOG_DEFAULT_DEBUG() \
+    LON_LOG_DEBUG(LogManager::getInstance()->getDefault())
+#define LON_LOG_DEFAULT_INFO() \
+    LON_LOG_INFO(LogManager::getInstance()->getDefault())
+#define LON_LOG_DEFAULT_WARN() \
+    LON_LOG_WARN(LogManager::getInstance()->getDefault())
+#define LON_LOG_DEFAULT_ERROR() \
+    LON_LOG_ERROR(LogManager::getInstance()->getDefault())
+#define LON_LOG_DEFAULT_FATAL() \
+    LON_LOG_FATAL(LogManager::getInstance()->getDefault())
 
 namespace lon {
-constexpr int flusher_max   = 10;
+constexpr int flusher_max = 10;
 class LogFlusher;
 class Logger;
 namespace detail {
-    void initDefaultLogger();
-    void initLoggerFromConfig();
-}
+void initDefaultLogger();
+void initLoggerFromConfig();
+}  // namespace detail
 
 enum Level
 {
@@ -54,22 +66,22 @@ struct LogEvent
     using StringStream = std::stringstream;
 
 
-    const char* file_name; //using string_view to save size?
+    const char* file_name;  // using string_view to save size?
     int line;
     Level level;
     uint32_t thread_id;
     uint32_t elapsed_ms;
     uint32_t fiber_id;
     // StringPiece thread_name;
-    StringPiece logger_name{}; // set in logger //耦合Logger
-    StringPiece datetime_pattern{};// set in logger //耦合Logger
-    String content{};//set in LoggerWrapper //耦合LoggerWrapper
+    StringPiece logger_name{};       // set in logger //耦合Logger
+    StringPiece datetime_pattern{};  // set in logger //耦合Logger
+    String content{};  // set in LoggerWrapper //耦合LoggerWrapper
     time_t time;
 
 
-    LogEvent(const LogEvent& _other)                        = default;
-    LogEvent(LogEvent&& _other) noexcept                    = default;
-    auto operator=(const LogEvent& _other) -> LogEvent&     = default;
+    LogEvent(const LogEvent& _other)     = default;
+    LogEvent(LogEvent&& _other) noexcept = default;
+    auto operator=(const LogEvent& _other) -> LogEvent& = default;
     auto operator=(LogEvent&& _other) noexcept -> LogEvent& = default;
 
     LogEvent(const char* _file_name,
@@ -85,8 +97,7 @@ struct LogEvent
           thread_id{_thread_id},
           elapsed_ms{_elapsed_ms},
           fiber_id{_fiber_id},
-          time{_time} {
-    }
+          time{_time} {}
 };
 
 struct LogWrapper
@@ -108,19 +119,17 @@ class Logger : public std::enable_shared_from_this<Logger>
 {
     friend void detail::initDefaultLogger();
     friend void detail::initLoggerFromConfig();
-public:
-    using StringStream = std::stringstream;
-    using ptr = std::shared_ptr<Logger>;
-    using FormatterFunc = std::function<void(StringStream& stream, LogEvent*)>;
-    //noexcept
 
-    Logger(const String& name) : name_{name} {
-        
-    }
+public:
+    using StringStream  = std::stringstream;
+    using ptr           = std::shared_ptr<Logger>;
+    using FormatterFunc = std::function<void(StringStream& stream, LogEvent*)>;
+    // noexcept
+
+    Logger(const String& name) : name_{name} {}
 
     inline static const char* levelToString(Level level) noexcept {
-        static const char* LogLevelName[Level::SIZE] =
-        {
+        static const char* LogLevelName[Level::SIZE] = {
             "DEBUG",
             "INFO",
             "WARN",
@@ -146,9 +155,21 @@ public:
             flushers_[flusher_count_++] = std::move(flusher);
     }
 
+    void setLevel(Level level) {
+        level_ = level;
+    }
+
+    /**
+     * @brief Set the Formatters object, if formatters is not set, log will be
+     * empty
+     *
+     * @param formatter_pattern
+     */
+    void setFormatters(const String& formatter_pattern);
+
 private:
     void registerUpdateFlusher() const;
-    void setFormatters(const String& formatter_pattern);
+
 
     void addOneFormatter(FormatterFunc formatter) {
         formatters_.emplace_back(std::move(formatter));
@@ -156,8 +177,8 @@ private:
 
 
 private:
-    Level level_         = DEBUG;
-    int flusher_count_   = 0;
+    Level level_       = DEBUG;
+    int flusher_count_ = 0;
     std::string name_{};
     std::string datetime_pattern_{};
     std::array<std::unique_ptr<log::Flusher>, flusher_max> flushers_{nullptr};
@@ -165,22 +186,24 @@ private:
 };
 
 
-
 class _LogManager : lon::Noncopyable
 {
     friend void detail::initDefaultLogger();
     friend void detail::initLoggerFromConfig();
+
 public:
     _LogManager();
 
     Logger::ptr getLogger(const String& key) {
-        if(auto iter = loggers_.find(key); iter!=loggers_.end()) return iter->second;
+        if (auto iter = loggers_.find(key); iter != loggers_.end())
+            return iter->second;
         return nullptr;
     }
 
     Logger::ptr getDefault() {
         return default_logger_;
     }
+
 private:
     Logger::ptr default_logger_ = nullptr;
     std::unordered_map<String, Logger::ptr> loggers_{};
@@ -190,4 +213,4 @@ private:
 using LogManager = Singleton<_LogManager>;
 
 
-} // namespace lon
+}  // namespace lon

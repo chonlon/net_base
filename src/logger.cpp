@@ -1,14 +1,14 @@
 #include "logger.h"
-#include "logging/logger_flusher.h"
 #include "base/info.h"
 #include "base/string_parsers.h"
 #include "logging/loger_formatters.h"
+#include "logging/logger_flusher.h"
 
 
-#include <iostream>
-#include <fmt/core.h>
 #include "base.h"
 #include "logging/logger_data_convert.h"
+#include <fmt/core.h>
+#include <iostream>
 
 namespace lon {
 
@@ -16,14 +16,11 @@ namespace lon {
 Level Logger::levelFromString(StringPiece str) noexcept {
     std::string str_upper;
     std::transform(
-        str.begin(),
-        str.end(),
-        std::back_inserter(str_upper),
-        ::toupper);
+        str.begin(), str.end(), std::back_inserter(str_upper), ::toupper);
 
-#define LON_XX(name)            \
-    if (str_upper == #name) {   \
-        return Level::name;     \
+#define LON_XX(name)          \
+    if (str_upper == #name) { \
+        return Level::name;   \
     }
 
     LON_XX(DEBUG)
@@ -38,12 +35,7 @@ Level Logger::levelFromString(StringPiece str) noexcept {
 
 
 LogWrapper::LogWrapper(std::shared_ptr<Logger> _logger_ptr, LogEvent _event)
-    : stream{},
-      logger_ptr{_logger_ptr},
-      event{std::move(_event)} {
-
-
-}
+    : stream{}, logger_ptr{_logger_ptr}, event{std::move(_event)} {}
 
 LogWrapper::~LogWrapper() {
     event.content = stream.str();
@@ -66,83 +58,11 @@ void Logger::log(LogEvent event) noexcept {
     }
 }
 
-void Logger::registerUpdateFlusher() const {
-}
+void Logger::registerUpdateFlusher() const {}
 
 void Logger::setFormatters(const String& formatter_pattern) {
-    // TODO 删除注释
-    // std::vector<std::tuple<std::string, std::string, int>> vec;
-    // std::string nstr{};
-    // for (std::size_t i = 0, size = formatter_pattern.size(); i < size; ++i) {
-    //     if (formatter_pattern[i] != '%') {
-    //         nstr.append(1, formatter_pattern[i]);
-    //         continue;
-    //     }
-    //     if ((i + 1) < size) {
-    //         if (formatter_pattern[i + 1] == '%') {
-    //             nstr.append(1, '%');
-    //             continue;
-    //         }
-    //     }
-    //
-    //     std::size_t n         = i + 1;
-    //     int fmt_status        = 0;
-    //     std::size_t fmt_begin = 0;
-    //     std::string str;
-    //     std::string fmt;
-    //
-    //     while (n < formatter_pattern.size()) {
-    //         if (!fmt_status &&
-    //             (!isalpha(formatter_pattern[n]) && formatter_pattern[n] != '{'
-    //                 &&
-    //                 formatter_pattern[n] != '}')) {
-    //             str = formatter_pattern.substr(i + 1, n - i - 1);
-    //             break;
-    //         }
-    //         if (fmt_status == 0) {
-    //             if (formatter_pattern[n] == '{') {
-    //                 str        = formatter_pattern.substr(i + 1, n - i - 1);
-    //                 fmt_status = 1; //解析格式
-    //                 fmt_begin  = n;
-    //                 ++n;
-    //                 continue;
-    //             }
-    //         } else if (fmt_status == 1) {
-    //             if (formatter_pattern[n] == '}') {
-    //                 fmt = formatter_pattern.substr(
-    //                     fmt_begin + 1,
-    //                     n - fmt_begin - 1);
-    //                 fmt_status = 0;
-    //                 ++n;
-    //                 break;
-    //             }
-    //         }
-    //         ++n;
-    //         if (n == formatter_pattern.size()) {
-    //             if (str.empty()) {
-    //                 str = formatter_pattern.substr(i + 1);
-    //             }
-    //         }
-    //     }
-    //
-    //     if (fmt_status == 0) {
-    //         if (!nstr.empty()) {
-    //             vec.emplace_back(nstr, "", 0);
-    //             nstr.clear();
-    //         }
-    //         // str = formatter_pattern.substr(i + 1, n - i - 1);
-    //         vec.emplace_back(str, fmt, 1);
-    //         i = n - 1;
-    //     } else if (fmt_status == 1) {
-    //         std::cout << "pattern parse error: " << formatter_pattern << " - "
-    //             << formatter_pattern.substr(i) << '\n';
-    //         vec.emplace_back("<<pattern_error>>", fmt, 0);
-    //     }
-    // }
-    //
-    // if (!nstr.empty()) {
-    //     vec.emplace_back(nstr, "", 0);
-    // }
+    if (!formatters_.empty())
+        formatters_.clear();
 
     auto vec = logPatternParse(formatter_pattern);
 
@@ -171,8 +91,8 @@ void Logger::setFormatters(const String& formatter_pattern) {
             }
             auto formatter = LogFormatterFactory::getFormatter(key);
             if (formatter == nullptr) {
-                StringLogFormatter string_formatter(
-                    "<<error_format%" + str + ">>");
+                StringLogFormatter string_formatter("<<error_format%" + str +
+                                                    ">>");
                 addOneFormatter(std::move(string_formatter));
             } else {
                 addOneFormatter(std::move(formatter));
@@ -190,43 +110,52 @@ _LogManager::_LogManager() {
 // std::unordered_map<String, Logger::ptr> LogFactory::loggers_{};
 namespace detail {
 
-    void initDefaultLogger() {
-        auto ptr = std::make_shared<Logger>("root");
-        ptr->setFormatters("%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
-        ptr->addOneFlusher(log::FlusherManager::getInstance()->getLogFlusher("ProtectedStdoutFlusher", ""));
-        ptr->addOneFlusher(log::FlusherManager::getInstance()->getLogFlusher("ProtectedFileFlusher", "./logs/%H-root-%P.log"));
-        LogManager::getInstance()->default_logger_ = ptr;
-        LogManager::getInstance()->loggers_.insert({"root", ptr});
-        // LogFactory::default_logger_ = ptr;
-        //
-        // LogFactory::loggers_.insert({ "root", ptr });
-    }
+void initDefaultLogger() {
+    auto ptr = std::make_shared<Logger>("root");
+    ptr->setFormatters(
+        "%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
+    ptr->addOneFlusher(log::FlusherManager::getInstance()->getLogFlusher(
+        "ProtectedStdoutFlusher", ""));
+    ptr->addOneFlusher(log::FlusherManager::getInstance()->getLogFlusher(
+        "ProtectedFileFlusher", "./logs/%H-root-%P.log"));
+    ptr->setLevel(Level::DEBUG);
+    LogManager::getInstance()->default_logger_ = ptr;
+    LogManager::getInstance()->loggers_.insert({"root", ptr});
+    // LogFactory::default_logger_ = ptr;
+    //
+    // LogFactory::loggers_.insert({ "root", ptr });
+}
 
-    void initLoggerFromConfig() {
-        auto log_data = BaseMainConfig::getInstance()->get<std::vector<detail::LogConfigData>>("logs");
-        for(auto& item : log_data) {
-            auto ptr = std::make_shared<Logger>(item.name);
-            ptr->setFormatters(item.formatter);
-            for(auto flusher : item.flushers) {
-                ptr->addOneFlusher(lon::log::FlusherManager::getInstance()->getLogFlusher(flusher.type, flusher.name_pattern));
-            }
-            LogManager::getInstance()->loggers_.insert({item.name, ptr});
-            if(item.name == "root") { // root logger in config will replace default root logger.
-                LogManager::getInstance()->default_logger_ = ptr;
-            }
+void initLoggerFromConfig() {
+    auto log_data =
+        BaseMainConfig::getInstance()->get<std::vector<detail::LogConfigData>>(
+            "logs");
+    for (auto& item : log_data) {
+        auto ptr = std::make_shared<Logger>(item.name);
+        ptr->setFormatters(item.formatter);
+        for (auto flusher : item.flushers) {
+            ptr->addOneFlusher(
+                lon::log::FlusherManager::getInstance()->getLogFlusher(
+                    flusher.type, flusher.name_pattern));
+        }
+        LogManager::getInstance()->loggers_.insert({item.name, ptr});
+        if (item.name == "root") {  // root logger in config will replace
+                                    // default root logger.
+            LogManager::getInstance()->default_logger_ = ptr;
         }
     }
-
-    
-    struct ___LoggerIniter
-    {
-        ___LoggerIniter() {
-            initDefaultLogger();
-            initLoggerFromConfig();
-        }
-    };
-    ___LoggerIniter initer;
 }
 
 
-} // namespace lon
+struct ___LoggerIniter
+{
+    ___LoggerIniter() {
+        initDefaultLogger();
+        initLoggerFromConfig();
+    }
+};
+___LoggerIniter initer;
+}  // namespace detail
+
+
+}  // namespace lon

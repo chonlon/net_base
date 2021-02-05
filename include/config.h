@@ -5,21 +5,23 @@
 #include "config/config_exception.h"
 #include "logger.h"
 
-#include <iostream>
-#include <fstream>
 #include <any>
-#include <unordered_map>
 #include <fmt/core.h>
+#include <fstream>
+#include <iostream>
+#include <nlohmann/json.hpp>
+#include <unordered_map>
 #include <yaml-cpp/exceptions.h>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
-#include <nlohmann/json.hpp>
 
 namespace lon {
-// 两种方案, 如果是想用继承, 那么get函数不能是模板函数, 也就是说要么返回值是void*, 要么抽象返回值, 要么使用any(其实还是void*)
-// 另一种就是采用类似contract的方式, 当然对于c++17并不能限制满足这样的约定, 需要主动满足这样的约定, 具体就是这些类采样相同的api
-// 第一种方案看起来很美好, 实现起来还是颇有难度的, 比如yaml::node.as<>需要提供类型, 而我们的虚函数是不能应付这样的可变类型的
-// 所以采用第二种方案
+// 两种方案, 如果是想用继承, 那么get函数不能是模板函数,
+// 也就是说要么返回值是void*, 要么抽象返回值, 要么使用any(其实还是void*)
+// 另一种就是采用类似contract的方式, 当然对于c++17并不能限制满足这样的约定,
+// 需要主动满足这样的约定, 具体就是这些类采样相同的api 第一种方案看起来很美好,
+// 实现起来还是颇有难度的, 比如yaml::node.as<>需要提供类型,
+// 而我们的虚函数是不能应付这样的可变类型的 所以采用第二种方案
 
 // 采用值方式提供结果
 // 原因是值方式+不会修改文件就是线程安全的
@@ -29,13 +31,13 @@ namespace detail {
 struct YamlConfigLoader;
 
 struct JsonConfigLoader;
-}
+}  // namespace detail
 
 class ConfigBase
 {
 public:
-
     virtual ~ConfigBase() = default;
+
 protected:
     // store in miss_map_ means not found at file loaded;
     std::unordered_map<String, std::any> miss_map_;
@@ -45,9 +47,9 @@ class JsonConfig : public ConfigBase
 {
     friend detail::JsonConfigLoader;
     using json = nlohmann::json;
+
 public:
-    ~JsonConfig() override {
-    }
+    ~JsonConfig() override {}
 
     JsonConfig(const char* filename) {
         std::ifstream i(filename);
@@ -55,13 +57,13 @@ public:
     }
 
     /**
-    * \brief 获取指定key的值
-    * \tparam T return type
-    * \param key
-    * \exception KeyNotFound if key not exists.
-    * \exception ConvertFailed if convert to target type failed.
-    * \return T if exists
-    */
+     * \brief 获取指定key的值
+     * \tparam T return type
+     * \param key
+     * \exception KeyNotFound if key not exists.
+     * \exception ConvertFailed if convert to target type failed.
+     * \return T if exists
+     */
     template <typename T>
     T get(const String& key) const {
         if (auto iter = miss_map_.find(key); iter != miss_map_.end())
@@ -70,8 +72,8 @@ public:
 
         const json* obj_pointer = &json_object_;
         for (auto& _key : keys) {
-            if (auto iter = obj_pointer->find(_key); iter != obj_pointer->end()
-            ) {
+            if (auto iter = obj_pointer->find(_key);
+                iter != obj_pointer->end()) {
                 obj_pointer = &(iter.value());
             } else {
                 throw config::KeyNotFound(fmt::format("key:{}", key));
@@ -101,8 +103,7 @@ public:
         } catch (config::KeyNotFound&) {
             miss_map_[key] = default_value;
             return std::any_cast<T>(miss_map_.at(key));
-        }
-        catch (...) {
+        } catch (...) {
             throw;
         }
     }
@@ -118,15 +119,12 @@ private:
 class YamlConfig : public ConfigBase
 {
     friend detail::YamlConfigLoader;
+
 public:
-    ~YamlConfig() override {
-    }
+    ~YamlConfig() override {}
 
 
-    YamlConfig(const char* filename)
-        : node_{YAML::LoadFile(filename)} {
-
-    }
+    YamlConfig(const char* filename) : node_{YAML::LoadFile(filename)} {}
 
     /**
      * \brief 获取指定key的值
@@ -145,7 +143,10 @@ public:
         // const YAML::Node* node = &node_;
         YAML::Node node;
         try {
-            // 本来是想用下面注释的循环查找的方式的, 但是yaml-cpp的值拷贝会改变Yaml::Node的值, operator[]返回的又是值类型..., 所以只好这么做了, 不过效率应该是一样的.
+            // 本来是想用下面注释的循环查找的方式的,
+            // 但是yaml-cpp的值拷贝会改变Yaml::Node的值,
+            // operator[]返回的又是值类型..., 所以只好这么做了,
+            // 不过效率应该是一样的.
             switch (keys.size()) {
                 case 0:
                     throw config::KeyNotFound(fmt::format("key:{}", key));
@@ -156,16 +157,17 @@ public:
                     node = node_[String(keys[0])][String(keys[1])];
                     break;
                 case 3:
-                    node = node_[String(keys[0])][String(keys[1])][String(
-                        keys[2])];
+                    node = node_[String(keys[0])][String(keys[1])]
+                                [String(keys[2])];
                     break;
                 case 4:
-                    node = node_[String(keys[0])][String(keys[1])][
-                        String(keys[2])][String(keys[3])];
+                    node = node_[String(keys[0])][String(keys[1])]
+                                [String(keys[2])][String(keys[3])];
                     break;
                 case 5:
-                    node = node_[String(keys[0])][String(keys[1])][
-                        String(keys[2])][String(keys[3])][String(keys[4])];
+                    node =
+                        node_[String(keys[0])][String(keys[1])][String(keys[2])]
+                             [String(keys[3])][String(keys[4])];
                     break;
                 default:
                     std::cerr << "too deep\n";
@@ -216,9 +218,7 @@ public:
     }
 
 private:
-    YamlConfig(String str)
-        : node_{YAML::Load(str)} {
-    }
+    YamlConfig(String str) : node_{YAML::Load(str)} {}
 
     YAML::Node node_;
 };
@@ -236,7 +236,7 @@ struct JsonConfigLoader
     JsonConfig config;
 };
 
-}
+}  // namespace detail
 
 
-} // namespace lon
+}  // namespace lon
