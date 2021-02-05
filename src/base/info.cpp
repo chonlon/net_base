@@ -15,20 +15,22 @@ thread_local String G_ThreadName = "UnSet";
 
 StringPiece getHostName() {
     if (G_HostName.empty()) {
-        char hostname[1024]{};
-        int i = 0;
-        for (; i < 5; ++i) {
-            if ((::gethostname(hostname, 1024)) == 0)
-                break;
-        }
-        if (i == 5)
-            throw ExecFailed(
-                fmt::format("get hostname failed with errno:{}", errno));
-
-        G_HostName = String(hostname);
+        G_HostName = getHostWithoutBuffer();        
     }
-
     return StringPiece(G_HostName);
+}
+
+String getHostWithoutBuffer() {
+    char hostname[1024]{};
+    int i = 0;
+    for (; i < 5; ++i) {
+        if ((::gethostname(hostname, 1024)) == 0)
+            break;
+    }
+    if (i == 5)
+        throw ExecFailed(
+            fmt::format("get hostname failed with errno:{}", errno));
+    return String(static_cast<const char*>(hostname));
 }
 
 bool backtraceStacks(std::vector<String>& stacks, int depth, int skip) {

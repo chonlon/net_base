@@ -8,6 +8,9 @@
 #include <iostream>
 #include <cstring>
 #include <fmt/format.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 
 
 namespace lon {
@@ -57,19 +60,39 @@ public:
         return result;
     }
 
+    WritableFile() : pos_{ 0 }, fd_{ -1 }, file_name_{} {}
 
     WritableFile(const String& _file_name, int o_flags = O_APPEND | O_WRONLY | O_CREAT | G_OpenBaseFlags)
         : pos_{0},
           fd_{-1},
           file_name_{_file_name} {
-        fd_ = ::open(file_name_.c_str(), o_flags, 0644);
+        fd_ = ::open(file_name_.c_str(), o_flags, 0777);
         if(fd_ < 0) {
-            throw ExecFailed(fmt::format("exec open failed with err:{}", strerror(errno)));
+            throw ExecFailed(fmt::format("exec open failed with err:{}, filename:{}", strerror(errno), _file_name));
         }
     }
 
+
+    WritableFile(const WritableFile& _other) = delete;
+    auto operator=(const WritableFile& _other)->WritableFile & = delete;
+    WritableFile(WritableFile&& _other) noexcept {
+        memcpy(buf_, _other.buf_, G_FileBufferSize);
+        pos_ =_other.pos_;
+        fd_ = _other.fd_;
+        _other.fd_ = -1;
+        file_name_=std::move(_other.file_name_);
+    }
+    auto operator=(WritableFile&& _other) noexcept -> WritableFile& {
+        memcpy(buf_, _other.buf_, G_FileBufferSize);
+        pos_ = _other.pos_;
+        fd_ = _other.fd_;
+        _other.fd_ = -1;
+        file_name_ = std::move(_other.file_name_);
+        return *this;
+    }
+
     ~WritableFile() {
-        
+
         if(fd_ >= 0)
             [[maybe_unused]]bool result = closeFile();
     }
@@ -105,5 +128,12 @@ private:
     String file_name_;
 };
 
+inline int createDir(const char* dirname) {
+    struct stat st = {};
+    if (stat(dirname, &st) == -1) {
+        return mkdir(dirname, 0700);
+    }
+    return 0;
+}
 
 }

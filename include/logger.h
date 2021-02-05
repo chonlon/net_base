@@ -24,6 +24,12 @@
 #define LON_LOG_ERROR(logger) LON_LOG(logger, lon::Level::ERROR)
 #define LON_LOG_FATAL(logger) LON_LOG(logger, lon::Level::FATAL)
 
+#define LON_LOG_DEFAULT_DEBUG() LON_LOG_DEBUG(LogManager::getInstance()->getDefault())
+#define LON_LOG_DEFAULT_INFO() LON_LOG_INFO(LogManager::getInstance()->getDefault())
+#define LON_LOG_DEFAULT_WARN() LON_LOG_WARN(LogManager::getInstance()->getDefault())
+#define LON_LOG_DEFAULT_ERROR() LON_LOG_ERROR(LogManager::getInstance()->getDefault())
+#define LON_LOG_DEFAULT_FATAL() LON_LOG_FATAL(LogManager::getInstance()->getDefault())
+
 namespace lon {
 constexpr int flusher_max   = 10;
 class LogFlusher;
@@ -108,20 +114,6 @@ public:
     using FormatterFunc = std::function<void(StringStream& stream, LogEvent*)>;
     //noexcept
 
-    Logger() {
-        name_ = "root";
-        setFormatters("%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
-        // setFormatters("%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
-        // SimpleStdoutFlusher* flusher = new SimpleStdoutFlusher;
-        // addOneFlusher(flusher);
-        SimpleFileFlusher* flusher2 = new SimpleFileFlusher{"/tmp/log1.txt"};
-        addOneFlusher(flusher2);
-        ProtectedFileFlusher* flusher3 = new ProtectedFileFlusher{"/tmp/log2.txt"};
-        addOneFlusher(flusher3);
-        AsyncFileLogFlusher* flusher4 = new AsyncFileLogFlusher{ "/tmp/log3.txt" };
-        addOneFlusher(flusher4);
-    }
-
     Logger(const String& name) : name_{name} {
         
     }
@@ -149,6 +141,11 @@ public:
 
     void log(LogEvent) noexcept;
 
+    void addOneFlusher(std::unique_ptr<log::Flusher> flusher) {
+        if (flusher != nullptr)
+            flushers_[flusher_count_++] = std::move(flusher);
+    }
+
 private:
     void registerUpdateFlusher() const;
     void setFormatters(const String& formatter_pattern);
@@ -157,40 +154,40 @@ private:
         formatters_.emplace_back(std::move(formatter));
     }
 
-    void addOneFlusher(LogFlusher* flusher) {
-        flushers_[flusher_count_++].reset(flusher);
-    }
+
 private:
     Level level_         = DEBUG;
     int flusher_count_   = 0;
     std::string name_{};
     std::string datetime_pattern_{};
-    std::array<std::unique_ptr<LogFlusher>, flusher_max> flushers_{nullptr};
+    std::array<std::unique_ptr<log::Flusher>, flusher_max> flushers_{nullptr};
     std::vector<FormatterFunc> formatters_{};
 };
 
 
 
-class LogFactory : lon::Noncopyable
+class _LogManager : lon::Noncopyable
 {
     friend void detail::initDefaultLogger();
     friend void detail::initLoggerFromConfig();
 public:
-    static Logger::ptr getLogger(const String& key) {
+    _LogManager();
+
+    Logger::ptr getLogger(const String& key) {
         if(auto iter = loggers_.find(key); iter!=loggers_.end()) return iter->second;
         return nullptr;
     }
 
-    static Logger::ptr getDefault() {
+    Logger::ptr getDefault() {
         return default_logger_;
     }
 private:
-    static Logger::ptr default_logger_;
-    static std::unordered_map<String, Logger::ptr> loggers_;
+    Logger::ptr default_logger_ = nullptr;
+    std::unordered_map<String, Logger::ptr> loggers_{};
 };
 
 
-
+using LogManager = Singleton<_LogManager>;
 
 
 } // namespace lon

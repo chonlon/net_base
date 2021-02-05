@@ -10,7 +10,7 @@
 namespace lon {
 
 
-LogFilename logFileNameParse(const String& pattern) {
+LogFilenameData logFileNameParse(const String& pattern) {
     auto vec = logPatternParse(pattern);
     String prefix;
     String postfix;
@@ -35,7 +35,7 @@ LogFilename logFileNameParse(const String& pattern) {
                 continue;
             }
             if (key == 'H') {
-                in_pre ? prefix += getHostName() : postfix += getHostName();
+                in_pre ? prefix += getHostWithoutBuffer() : postfix += getHostWithoutBuffer(); //由于初始化顺序不好控制, 只能使用不带buffer的
                 continue;
             }
             if (key == 'P') {
@@ -51,23 +51,19 @@ LogFilename logFileNameParse(const String& pattern) {
     return {prefix, postfix, dateTime};
 }
 
-String logFileNameGenerate(const String& prefix,
-                           const String& postfix,
-                           const String& datetime_pattern) {
-
+String logFileNameGenerate(const LogFilenameData& filename_data) {
     String filename;
-    filename.reserve(prefix.size() + postfix.size() + 15);
+    filename.reserve(filename_data.prefix.size() + filename_data.postfix.size() + 15);
 
     char timebuf[32];
     struct tm tm;
     time_t now = time(NULL);
     localtime_r(&now, &tm);
-    strftime(timebuf, sizeof timebuf, datetime_pattern.data(), &tm);
-    filename += prefix;
+    strftime(timebuf, sizeof timebuf, filename_data.dateTime.data(), &tm);
+    filename += filename_data.prefix;
     filename += timebuf;
-    filename += postfix;
+    filename += filename_data.postfix;
     return filename;
 }
-
 
 }

@@ -62,6 +62,7 @@ set(
     src/config.cpp
     src/base/info.cpp
     src/base/string_piece.cpp
+    src/logging/logger_filename.cpp
     src/logging/logger_formatters.cpp
 )
 
@@ -92,6 +93,8 @@ add_library(net_base OBJECT)
 target_include_directories(net_base PUBLIC "include" "src")
 target_link_libraries(net_base PUBLIC ${NET_BASE_LIB})
 target_sources(net_base PRIVATE ${NET_BASE_SRC})
+
+configure_file("bin/conf/main.json" "${EXECUTABLE_OUTPUT_PATH}/conf/main.json" COPYONLY)
 
 if(EnableTests)
     enable_testing()

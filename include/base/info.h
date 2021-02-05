@@ -37,6 +37,8 @@ namespace lon {
      */
     StringPiece getHostName();
 
+    String getHostWithoutBuffer();
+
     String backtraceString(int depth = 10, int skip = 1);
 
     inline pid_t getPid() {

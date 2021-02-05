@@ -3,6 +3,8 @@
 #include "base/nocopyable.h"
 #include "base/singleton.h"
 #include "base/typedef.h"
+#include "logging/logger_filename.h"
+
 
 #include <iostream>
 #include <queue>
@@ -10,15 +12,26 @@
 #define LON_USING_C_FILE 0
 
 
+
+
 namespace lon {
 
 namespace log {
 
+//TODO 完成定时器之后, 添加按照时间刷新输出文件功能(包括文件名)
+enum class FlushFrequency
+{
+    Mouth,
+    Week,
+    Day,
+    HalfDay,
+    Hour
+};
 
-class LogFlusher : public Noncopyable
+class Flusher : public Noncopyable
 {
 public:
-    virtual ~LogFlusher() = default;
+    virtual ~Flusher() = default;
 
     /**
      * \brief 如果是同步输出, flush可能阻塞在write文件上, 如果是异步输出, flush可能出现锁争夺, 对于超高频率写日志情况应使用异步方式
@@ -26,28 +39,27 @@ public:
      */
     virtual void flush(const String& str) = 0;
 
+
     virtual void setFilePattern(const String& pattern) = 0;
 
 protected:
     virtual void setFileName(const char* filename) = 0;
 };
 
-class DirectFlusher : public LogFlusher
+class DirectFlusher
 {
 public:
-    ~DirectFlusher() override {
-    }
+    virtual ~DirectFlusher() = default;
 };
 
-class AsyncFlusher : public LogFlusher
+class AsyncFlusher
 {
 public:
     AsyncFlusher() = default;
 
-    ~AsyncFlusher() override {
-    }
+    virtual ~AsyncFlusher() = default;
 
-    void flush(const String& str) override {
+    void flush(const String& str) {
         {
             std::lock_guard<Mutex> locker{mutex_};
             log_pool_.push(str);
@@ -71,19 +83,79 @@ protected:
 };
 
 
-class LogStdoutFlusher : public LogFlusher
-{
-};
-
-class LogFileFlusher : public LogFlusher
+class StdoutFlusher : public Flusher
 {
 public:
+    void setFilePattern(const String& pattern) override {
+    }
+
+protected:
+    void setFileName(const char* filename) override {
+    }
 };
+
+class FileFlusher : public Flusher
+#if LON_USING_C_FILE
+{
+public:
+    FileFlusher(const char* filename) {
+
+    }
+
+    FileFlusher(const String& pattern) {
+
+    }
+
+    void setFilePattern(const String& pattern) override {
+        filename_ = logFileNameParse(pattern);
+    }
+protected:
+    FILE* file_ = nullptr;
+    LogFilenameData filename_;
+};
+#else
+{
+public:
+    FileFlusher(const char* filename) : file_{} {
+        createDir(filename);
+        file_ = WritableFile(filename);
+    }
+
+    FileFlusher(const String& pattern)
+        : file_{} {
+        setFilePattern(pattern);
+        String filename = logFileNameGenerate(filename_);
+        createDir(filename);
+        setFileName(filename.c_str());
+    }
+
+    void setFilePattern(const String& pattern) override {
+        filename_ = logFileNameParse(pattern);
+    }
+
+protected:
+    void setFileName(const char* filename) override {
+        file_ = WritableFile{filename};
+    }
+
+protected:
+    WritableFile file_;
+    LogFilenameData filename_{};
+private:
+    static void createDir(const String& fullfilename) {
+        size_t last = fullfilename.find_last_of('/');
+        auto dirname = fullfilename.substr(0, last);
+        if((lon::createDir(dirname.c_str())) !=0) {
+            std::cerr << fmt::format("create dir err:{} with dir:{}", std::strerror(errno), dirname);
+        }
+    }
+};
+#endif
 
 /**
  * \brief 未加锁, 日志输出至标准输出
  */
-class SimpleStdoutFlusher : public DirectFlusher
+class SimpleStdoutFlusher : public StdoutFlusher, public DirectFlusher
 {
 public:
     ~SimpleStdoutFlusher() override {
@@ -100,52 +172,38 @@ public:
 /**
  * \brief 未加锁, 日志输出至指定文件
  */
-class SimpleFileFlusher : public DirectFlusher
-#if LON_USING_C_FILE
-        {
-        public:
+class SimpleFileFlusher : public FileFlusher, public DirectFlusher
 
-
-            SimpleFileFlusher(const char* filename) {
-                file_ = ::fopen(filename, "a");
-            }
-
-            ~SimpleFileFlusher() override {
-                ::fclose(file_);
-            }
-
-
-            void flush(const String& str) override {
-                ::fwrite(str.c_str(), str.size(), 1, file_);
-            }
-
-        private:
-            FILE* file_ = nullptr;
-        };
-#else
 {
 public:
     SimpleFileFlusher(const char* filename)
-        : file_{filename} {
+        : FileFlusher{filename} {
     }
+
+    SimpleFileFlusher(const String& pattern)
+        : FileFlusher{pattern} {
+    }
+
 
     ~SimpleFileFlusher() override {
     }
 
+#if LON_USING_C_FILE
+    void flush(const String& str) override {
+        ::fwrite(str.c_str(), str.size(), 1, file_);
+    }
+#else
     void flush(const String& str) override {
         file_.append(str);
     }
-
-private:
-    WritableFile file_;
+#endif
 };
 
-#endif
 
 /**
  * \brief 加锁, 日志输出至标准输出
  */
-class ProtectedStdoutFlusher : public DirectFlusher
+class ProtectedStdoutFlusher : public StdoutFlusher, public DirectFlusher
 {
 public:
     ~ProtectedStdoutFlusher() override {
@@ -164,50 +222,38 @@ private:
 /**
  * \brief 未加锁, 日志输出至指定文件
  */
-class ProtectedFileFlusher : public DirectFlusher
-#if LON_USING_C_FILE
-        {
-        public:
-            ProtectedFileFlusher(const char* filename) {
-                file_ = ::fopen(filename, "a");
-            }
+class ProtectedFileFlusher : public FileFlusher, public DirectFlusher
 
-            ~ProtectedFileFlusher() override {
-                ::fclose(file_);
-            }
-
-
-            void flush(const String& str) override {
-                std::lock_guard<Mutex> locker{ mutex_ };
-                ::fwrite(str.c_str(), str.size(), 1, file_);
-            }
-        private:
-            FILE* file_ = nullptr;
-            Mutex mutex_{};
-        };
-
-#else
 {
 public:
     ProtectedFileFlusher(const char* filename)
-        : file_{filename} {
+        : FileFlusher{filename} {
+    }
+
+    ProtectedFileFlusher(const String& pattern)
+        : FileFlusher{pattern} {
     }
 
     ~ProtectedFileFlusher() override {
     }
 
+#if LON_USING_C_FILE
+    void flush(const String& str) override {
+        std::lock_guard<Mutex> locker{ mutex_ };
+        ::fwrite(str.c_str(), str.size(), 1, file_);
+    }
+#else
     void flush(const String& str) override {
         std::lock_guard<Mutex> locker{mutex_};
         file_.append(str);
     }
-
+#endif
 private:
-    WritableFile file_;
     Mutex mutex_{};
 };
-#endif
 
-class AsyncStdoutLogFlusher : public AsyncFlusher
+
+class AsyncStdoutLogFlusher : public StdoutFlusher, public AsyncFlusher
 {
 public:
     AsyncStdoutLogFlusher() {
@@ -234,6 +280,10 @@ public:
         thread_.join();
     }
 
+    void flush(const String& str) override {
+        AsyncFlusher::flush(str);
+    }
+
 private:
     void doFlush() override {
         std::lock_guard<Mutex> locker{mutex_};
@@ -245,54 +295,71 @@ private:
 };
 
 
-class AsyncFileLogFlusher : public AsyncFlusher
-#if LON_USING_C_FILE
-        {
-        public:
-            AsyncFileLogFlusher(const char* filename) {
-                file_ = ::fopen(filename, "a");
+class AsyncFileLogFlusher : public FileFlusher, public AsyncFlusher
 
-                thread_ = Thread([this]()
-                    {
-                        while (!stop_) {
-                            {
-                                std::unique_lock<Mutex> locker{ mutex_ };
-                                condition_var_.wait(locker);
-                            }
-
-                            doFlush();
-                        }
-                    });
-            }
-
-            ~AsyncFileLogFlusher() override {
-                ::fclose(file_);
-
-                {
-                    std::lock_guard<Mutex> locker{ mutex_ };
-                    stop_ = true;
-                }
-
-                condition_var_.notify_one();
-                thread_.join();
-            }
-        private:
-            void doFlush() override {
-                std::lock_guard<Mutex> locker{ mutex_ };
-                while (!log_pool_.empty()) {
-                    auto log = log_pool_.front();
-                    ::fwrite(log.c_str(), log.size(), 1, file_);
-                    log_pool_.pop();
-                }
-            }
-        private:
-            FILE* file_ = nullptr;
-        };
-#else
 {
 public:
     AsyncFileLogFlusher(const char* filename)
-        : file_{filename} {
+        : FileFlusher{filename} {
+        initThread();
+    }
+
+    AsyncFileLogFlusher(const String& pattern)
+        : FileFlusher{pattern} {
+    }
+
+
+
+    void flush(const String& str) override {
+        AsyncFlusher::flush(str);
+    }
+
+
+
+#if LON_USING_C_FILE
+    ~AsyncFileLogFlusher() override {
+        ::fclose(file_);
+
+        {
+            std::lock_guard<Mutex> locker{ mutex_ };
+            stop_ = true;
+        }
+
+        condition_var_.notify_one();
+        thread_.join();
+    }
+private:
+    void doFlush() override {
+        std::lock_guard<Mutex> locker{ mutex_ };
+        while (!log_pool_.empty()) {
+            auto log = log_pool_.front();
+            ::fwrite(log.c_str(), log.size(), 1, file_);
+            log_pool_.pop();
+        }
+    }
+#else
+    ~AsyncFileLogFlusher() override {
+        {
+            std::lock_guard<Mutex> locker{mutex_};
+            stop_ = true;
+        }
+
+        condition_var_.notify_one();
+        thread_.join();
+    }
+
+
+private:
+    void doFlush() override {
+        std::lock_guard<Mutex> locker{mutex_};
+        while (!log_pool_.empty()) {
+            file_.append(log_pool_.front());
+            log_pool_.pop();
+        }
+    }
+#endif
+private:
+    void initThread() {
         thread_ = Thread([this]()
         {
             while (!stop_) {
@@ -305,45 +372,26 @@ public:
             }
         });
     }
-
-    ~AsyncFileLogFlusher() override {
-        {
-            std::lock_guard<Mutex> locker{mutex_};
-            stop_ = true;
-        }
-
-        condition_var_.notify_one();
-        thread_.join();
-    }
-
-private:
-    void doFlush() override {
-        std::lock_guard<Mutex> locker{mutex_};
-        while (!log_pool_.empty()) {
-            file_.append(log_pool_.front());
-            log_pool_.pop();
-        }
-    }
-
-    WritableFile file_;
 };
-#endif
+
 
 class _LogFlusherManager
 {
 public:
-    using MakerFunc = std::function<std::unique_ptr<LogFlusher>(
-        const char* filename)>;
+    using MakerFunc = std::function<std::unique_ptr<Flusher>(
+        const String& pattern)>;
 
     _LogFlusherManager() {
+        //注册已有Flusher
+
 #define LON_XX(name) \
-            flushers_maker_.emplace(#name, [](const char* filename){ return std::make_unique<name>(filename); });
+            rigisterFlushMaker(#name, [](const String& pattern){ return std::make_unique<name>(pattern); });
         LON_XX(SimpleFileFlusher)
         LON_XX(ProtectedFileFlusher)
         LON_XX(AsyncFileLogFlusher)
 #undef LON_XX
 #define LON_XX(name) \
-            flushers_maker_.emplace(#name, []([[maybe_unused]] const char*  filename){ return std::make_unique<name>(); });
+            rigisterFlushMaker(#name, []([[maybe_unused]] const String& pattern){ return std::make_unique<name>(); });
         LON_XX(SimpleStdoutFlusher)
         LON_XX(ProtectedStdoutFlusher)
         LON_XX(AsyncStdoutLogFlusher)
@@ -356,8 +404,8 @@ public:
      * @param key 大小写不敏感
      * @return std::unique_ptr<LogFlusher> LogFlusher的指针
      */
-    std::unique_ptr<LogFlusher> getLogFlusher(const String& key,
-                                              const char* filename) {
+    std::unique_ptr<Flusher> getLogFlusher(const String& key,
+                                           const String& pattern) {
         String convert;
         std::transform(key.begin(),
                        key.end(),
@@ -365,7 +413,7 @@ public:
                        ::toupper);
         if (auto iter = flushers_maker_.find(convert); iter != flushers_maker_.
             end())
-            return iter->second(filename);
+            return iter->second(pattern);
         return nullptr;
     }
 
@@ -380,13 +428,14 @@ public:
     bool rigisterFlushMaker(const String& key, MakerFunc func) {
         if (auto iter = flushers_maker_.find(key); iter != flushers_maker_.end()
         )
-            return false;
+        return false;
         String convert;
         std::transform(key.begin(),
                        key.end(),
                        std::back_inserter(convert),
                        ::toupper);
-        flushers_maker_.emplace(key, std::move(func));
+        flushers_maker_.emplace(convert, std::move(func));
+        return true;
     }
 
 private:
@@ -394,7 +443,7 @@ private:
 };
 
 
-using LogFlusherManager = Singleton<_LogFlusherManager>;
+using FlusherManager = Singleton<_LogFlusherManager>;
 
 }
 }

@@ -13,7 +13,7 @@ namespace lon {
 	 * @return tuple<1> 模式对应的字串, 比方说datetime后面会跟需要指定的时间格式字串
 	 * @return tuple<2> 是否有对应模式, 0代表没有, 1代表有
 	*/
-	std::vector<std::tuple<std::string, std::string, int>> logPatternParse(const String& formatter_pattern) {
+	inline std::vector<std::tuple<std::string, std::string, int>> logPatternParse(const String& formatter_pattern) {
         std::vector<std::tuple<std::string, std::string, int>> vec;
         std::string nstr{};
         for (std::size_t i = 0, size = formatter_pattern.size(); i < size; ++i) {

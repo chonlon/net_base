@@ -4,7 +4,7 @@
 
 namespace lon {
 
-struct LogFilename
+struct LogFilenameData
 {
     String prefix;
     String postfix;
@@ -17,14 +17,12 @@ struct LogFilename
  * %d 时间格式
  * %H hostname
  * %P pid
- * @return tuple<0> prefix-before datetime
- * @return tuple<1> postfix-after datetime
- * @return tuple<2> datetime_pattern
+ * @return prefix --before datetime
+ * @return postfix --after datetime
+ * @return datetime_pattern
 */
-LogFilename logFileNameParse(const String& pattern);
+LogFilenameData logFileNameParse(const String& pattern);
 
-String logFileNameGenerate(const String& prefix,
-                           const String& postfix,
-                           const String& datetime_pattern);
+String logFileNameGenerate(const LogFilenameData& filename_data);
 
 }
