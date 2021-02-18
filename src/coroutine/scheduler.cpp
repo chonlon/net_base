@@ -5,13 +5,15 @@ static auto G_logger = lon::LogManager::getInstance()->getLogger("system");
 namespace lon::coroutine {
 
 
-void Scheduler::addExecutor(Executor::Ptr executor, int32_t index) {
+bool Scheduler::addExecutor(Executor::Ptr executor, int32_t index) {
+    if(stopping_) return false;
     std::lock_guard<Mutex> locker(executors_mutex_);
     if(index == 0) {
         executors_.front().push(executor);
     } else {
         executors_[index].push(executor);
     }
+    return true;
 }
 
 void Scheduler::threadScheduleFunc(int index) {

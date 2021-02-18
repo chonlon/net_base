@@ -146,7 +146,7 @@ private:
     size_t stack_size_;
     void* stack_;  // 执行单元的栈.
     ExectutorFunc callback_;
-    ucontext_t context_;
+    ucontext_t context_; //TODO ucontext 的size大约是1KB, 使用指针而不是直接作为成员, 这样的话处于init状态的executor可以很大程度上减少内存消耗.
 };
 
 

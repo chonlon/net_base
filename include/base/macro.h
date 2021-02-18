@@ -10,12 +10,19 @@
 #define LON_NODISCARD
 #endif
 
-#ifdef __linux__ 
+#ifdef __linux__
     #define LON_LINUX
 #elif _WIN32
     #define LON_WINDOWS
 #else
-    #define LON_OTHER_OS
+#define LON_OTHER_OS
 #endif
 
 #define LON_HAVE_O_CLOEXEC 1
+
+
+#define LON_ERROR_INVOKE_ASSERT(condition, func_name, logger) \
+    	if (!(condition)) { \
+            LON_LOG_ERROR(logger) << fmt::format(##func_name " failed, with error: {}", std::strerror(errno)); \
+            assert(false); \
+        }

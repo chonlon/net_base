@@ -43,13 +43,24 @@ public:
      * @brief 添加executor到指定线程执行
      * @param executor 
      * @param index 指定线程的index, 如果指定线程为0, 则为随机线程执行
+     * @return 如果scheduler正在停止, 那么会拒绝添加任务, 返回false. 添加成功返回true.
     */
-    void addExecutor(Executor::Ptr executor, int32_t index = 0);
+    bool addExecutor(Executor::Ptr executor, int32_t index = 0);
 
     void run() {
         for (size_t i = 1; i <= threads_count_; ++i) {
             exec_threads_.emplace_back(
                 std::bind(&Scheduler::threadScheduleFunc, this, i));
+        }
+    }
+
+    void stop() {
+        if(exit_with_tasks_processed) {
+            stopping_ = true;
+        } else {
+            // std::lock_guard<Mutex> locker(executors_mutex_);
+            // executors_.clear();
+            stopped_ = true;
         }
     }
 
@@ -95,10 +106,12 @@ private:
     void threadScheduleFunc(int index);
 
     bool stop_pending() {
-        return exit_with_tasks_processed && stop_pending_func_();
+        return stopped_ && stop_pending_func_();
     }
 
 private:
+    bool stopping_{false};
+    bool stopped_{false};
     bool exit_with_tasks_processed{true};
     Mutex executors_mutex_{};
     BlockFuncType block_pending_func_{nullptr};

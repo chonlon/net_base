@@ -31,10 +31,10 @@ void runScheduler() {
     // scheduler.run();
     for(int j = 0 ; j <10; ++j) {
         scheduler.addExecutor(std::make_shared<lon::coroutine::Executor>([]() 
-            {
-                fmt::print("current: {}, in executor {} at thread {}\n", ++i, lon::coroutine::Executor::getCurrent()->getId(), lon::getThreadId());
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }));
+        {
+            fmt::print("current: {}, in executor {} at thread {}\n", ++i, lon::coroutine::Executor::getCurrent()->getId(), lon::getThreadId());
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }));
         fmt::print("----{}-----\n", i);
     }
     scheduler.run();
