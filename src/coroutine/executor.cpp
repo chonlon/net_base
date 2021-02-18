@@ -122,7 +122,7 @@ void Executor::reset(ExectutorFunc func, bool back_to_caller) {
 }
 
 void Executor::swapContext(Executor* dst, Executor* src) {
-    if (swapcontext(&dst->context_, &src->context_)) {
+    if (swapcontext(dst->context_, src->context_)) {
         LON_LOG_FATAL(G_logger)
             << "swap context failed, executor id:" << src->id_ << ';'
             << dst->id_ << "stack:" << backtraceString();
@@ -142,14 +142,14 @@ void Executor::makeContext() {
         free(stack_);
     else
         stack_ = malloc(stack_size_);
-
+    context_ = new struct ucontext_t;
     getCurrentContext();
-    context_.uc_link          = nullptr;
-    context_.uc_stack.ss_sp   = stack_;
-    context_.uc_stack.ss_size = stack_size_;
+    context_->uc_link          = nullptr;
+    context_->uc_stack.ss_sp   = stack_;
+    context_->uc_stack.ss_size = stack_size_;
 
 
-    makecontext(&context_, &executorMainFunc, 0);
+    makecontext(context_, &executorMainFunc, 0);
 }
 
 Executor::Ptr Executor::initMainExecutor() {
@@ -190,7 +190,7 @@ void Executor::terminalInner() {
 }
 
 void Executor::getCurrentContext() {
-    if (getcontext(&context_)) {
+    if (getcontext(context_)) {
         LON_LOG_ERROR(G_logger)
                 << "get context failed" << backtraceString();
     }
