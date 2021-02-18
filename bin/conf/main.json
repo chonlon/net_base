@@ -7,7 +7,7 @@
             "flusher": [
                 {
                     "type": "ProtectedFileFlusher",
-                    "pattern": "./logs/%H-root-%P.log"
+                    "pattern": "./logs/%H-root.log"
                 },
                 {
                     "type": "ProtectedStdoutFlusher"
@@ -21,7 +21,7 @@
             "flusher": [
                 {
                     "type": "ProtectedFileFlusher",
-                    "pattern": "./logs/%H-root-%P.log"
+                    "pattern": "./logs/%H-root.log"
                 },
                 {
                     "type": "ProtectedStdoutFlusher"

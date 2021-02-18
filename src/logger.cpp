@@ -16,7 +16,10 @@ namespace lon {
 Level Logger::levelFromString(StringPiece str) noexcept {
     std::string str_upper;
     std::transform(
-        str.begin(), str.end(), std::back_inserter(str_upper), ::toupper);
+        str.begin(),
+        str.end(),
+        std::back_inserter(str_upper),
+        ::toupper);
 
 #define LON_XX(name)          \
     if (str_upper == #name) { \
@@ -35,7 +38,10 @@ Level Logger::levelFromString(StringPiece str) noexcept {
 
 
 LogWrapper::LogWrapper(std::shared_ptr<Logger> _logger_ptr, LogEvent _event)
-    : stream{}, logger_ptr{_logger_ptr}, event{std::move(_event)} {}
+    : stream{},
+      logger_ptr{_logger_ptr},
+      event{std::move(_event)} {
+}
 
 LogWrapper::~LogWrapper() {
     event.content = stream.str();
@@ -58,7 +64,8 @@ void Logger::log(LogEvent event) noexcept {
     }
 }
 
-void Logger::registerUpdateFlusher() const {}
+void Logger::registerUpdateFlusher() const {
+}
 
 void Logger::setFormatters(const String& formatter_pattern) {
     if (!formatters_.empty())
@@ -92,7 +99,7 @@ void Logger::setFormatters(const String& formatter_pattern) {
             auto formatter = LogFormatterFactory::getFormatter(key);
             if (formatter == nullptr) {
                 StringLogFormatter string_formatter("<<error_format%" + str +
-                                                    ">>");
+                    ">>");
                 addOneFormatter(std::move(string_formatter));
             } else {
                 addOneFormatter(std::move(formatter));
@@ -115,9 +122,11 @@ void initDefaultLogger() {
     ptr->setFormatters(
         "%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
     ptr->addOneFlusher(log::FlusherManager::getInstance()->getLogFlusher(
-        "ProtectedStdoutFlusher", ""));
+        "ProtectedStdoutFlusher",
+        ""));
     ptr->addOneFlusher(log::FlusherManager::getInstance()->getLogFlusher(
-        "ProtectedFileFlusher", "./logs/%H-root-%P.log"));
+        "ProtectedFileFlusher",
+        "./logs/%H-root-%P.log"));
     ptr->setLevel(Level::DEBUG);
     LogManager::getInstance()->default_logger_ = ptr;
     LogManager::getInstance()->loggers_.insert({"root", ptr});
@@ -134,13 +143,20 @@ void initLoggerFromConfig() {
         auto ptr = std::make_shared<Logger>(item.name);
         ptr->setFormatters(item.formatter);
         for (auto flusher : item.flushers) {
-            ptr->addOneFlusher(
-                lon::log::FlusherManager::getInstance()->getLogFlusher(
-                    flusher.type, flusher.name_pattern));
+            if (auto flusher_ptr = lon::log::FlusherManager::getInstance()->
+                getLogFlusher(
+                    flusher.type,
+                    flusher.name_pattern); flusher_ptr) {
+                ptr->addOneFlusher(std::move(flusher_ptr));
+            } else {
+                std::cerr << "flusher type error, type name:" << flusher.type;
+            }
+
         }
         LogManager::getInstance()->loggers_.insert({item.name, ptr});
-        if (item.name == "root") {  // root logger in config will replace
-                                    // default root logger.
+        if (item.name == "root") {
+            // root logger in config will replace
+            // default root logger.
             LogManager::getInstance()->default_logger_ = ptr;
         }
     }
@@ -154,8 +170,9 @@ struct ___LoggerIniter
         initLoggerFromConfig();
     }
 };
+
 ___LoggerIniter initer;
-}  // namespace detail
+} // namespace detail
 
 
-}  // namespace lon
+} // namespace lon

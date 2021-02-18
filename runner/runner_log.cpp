@@ -37,6 +37,8 @@ int main() {
     LON_LOG_DEFAULT_WARN() << "warn";
     LON_LOG_DEFAULT_ERROR() << "error";
 
+    std::cout << "generate filename: " << lon::logFileNameGenerate(lon::logFileNameParse("~/.logs/%d{%m-%d_%H}_%H-%P.log")) << '\n';
+
     lon::JsonConfig config("conf/test.json");
     auto data = config.get<std::vector<detail::LogConfigData>>("logs");
     std::cout << data[0].name;
@@ -44,6 +46,5 @@ int main() {
     lon::YamlConfig config2("conf/test.yml");
     auto data2 = config.get<std::vector<detail::LogConfigData>>("logs");
     std::cout << data2[0].name;
-
 
 }

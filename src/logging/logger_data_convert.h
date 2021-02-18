@@ -109,24 +109,6 @@ namespace YAML {
 
 namespace lon {
 namespace detail {
-    // template <>
-    // struct  adl_serializer<lon::detail::LogConfigData>
-    // {
-    //     static void to_json(nlohmann::json& j, const lon::detail::LogConfigData&) {
-    //         //not needed;
-    //         return;
-    //     }
-    //
-    //     static void from_json(const nlohmann::json& j, lon::detail::LogConfigData& rhs) {
-    //
-    //     }
-    // };
-    //
-
-    // static void to_json(nlohmann::json& j, const lon::detail::LogConfigData&) {
-    //     //not needed;
-    //     return;
-    // }
 
     template <typename BasicJsonType>
     static void from_json(const BasicJsonType& j, lon::detail::LogFlusherConfigData& rhs) {

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <cstdint>
 #include <string>
@@ -25,4 +25,11 @@ using int32_t = std::int32_t;
 using uint32_t = std::uint32_t;
 using int64_t = std::int64_t;
 using uint64_t = std::uint64_t;
+
+namespace data {
+	constexpr uint32_t K = 1024;
+	constexpr uint32_t M = K * K;
+	constexpr uint32_t G = M * K;
+}
+
 }

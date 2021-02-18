@@ -2,7 +2,6 @@
 #include "logging/logger_flusher.h"
 
 
-
 #include <regex>
 #include <string>
 #include <gtest/gtest.h>
@@ -16,15 +15,15 @@ const char* logger_name = "Test";
 
 TEST(LogTest, LogLeveltoString) {
     EXPECT_STREQ(Logger::levelToString(Level::DEBUG),
-        "DEBUG");
+                 "DEBUG");
     EXPECT_STREQ(Logger::levelToString(Level::WARN),
-        "WARN");
+                 "WARN");
     EXPECT_STREQ(Logger::levelToString(Level::INFO),
-        "INFO");
+                 "INFO");
     EXPECT_STREQ(Logger::levelToString(Level::ERROR),
-        "ERROR");
+                 "ERROR");
     EXPECT_STREQ(Logger::levelToString(Level::FATAL),
-        "FATAL");
+                 "FATAL");
 
 
     EXPECT_EQ(Logger::levelFromString("debug"), Level::DEBUG);
@@ -37,7 +36,8 @@ TEST(LogTest, LogLeveltoString) {
 
 TEST(LogTest, LogLevel) {
     DECLEAR_LOGGER
-    logger->setFormatters("%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
+    logger->setFormatters(
+        "%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
 
     logger->setLevel(DEBUG);
     LON_LOG_DEBUG(logger) << "test";
@@ -53,7 +53,7 @@ TEST(LogTest, LogLevel) {
     EXPECT_FALSE(string_flusher->log.empty());
     string_flusher->log.clear();
 
-    
+
     logger->setLevel(WARN);
     LON_LOG_DEBUG(logger) << "test";
     EXPECT_TRUE(string_flusher->log.empty());
@@ -71,15 +71,16 @@ TEST(LogTest, LogLevel) {
 
 TEST(LogTest, LogOut) {
     DECLEAR_LOGGER
-    logger->setFormatters("%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
+    logger->setFormatters(
+        "%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
 
     const char* file_name = "test.cc";
-    int32_t line = 10;
-    uint32_t thread_id = 0;
-    uint32_t elapsed_ms = 1;
-    uint32_t fiber_id = 2;
-    uint64_t _time = static_cast<uint64_t>(time(nullptr));
-    lon::Level level = lon::Level::DEBUG;
+    int32_t line          = 10;
+    uint32_t thread_id    = 0;
+    uint32_t elapsed_ms   = 1;
+    uint32_t fiber_id     = 2;
+    uint64_t _time        = static_cast<uint64_t>(time(nullptr));
+    lon::Level level      = lon::Level::DEBUG;
 
     LogEvent event(
         file_name,
@@ -93,7 +94,7 @@ TEST(LogTest, LogOut) {
         LogWrapper w(logger, event);
         w.stream << "log";
     }
-    
+
 
     std::string string_log = string_flusher->log;
     std::smatch result;
@@ -114,12 +115,12 @@ TEST(LogTest, LogOut) {
         std::stringstream str_result;
         str_result << thread_id << '\t' << fiber_id
             << '\t' << '[' << lon::Logger::levelToString(level) << ']' << '\t'
-            << '[' << logger_name << ']' << '\t' << '<' << file_name
-            << ':' << line << '>' << '\t' << "log";
+            << '[' << logger_name << ']' << '\t'
+            << '<' << file_name << ':' << line << '>'
+            << '\t' << "log";
         auto s = str_result.str();
         EXPECT_STREQ(part2.c_str(), s.c_str());
-    }
-    else {
+    } else {
         EXPECT_FALSE(true);
     }
 }
@@ -129,7 +130,7 @@ TEST(LogTest, LogFormat) {
     const char* msg = "log msg";
     logger->setFormatters("%t%T%m%n");
     LON_LOG_DEBUG(logger) << msg;
-    
+
 
     std::stringstream ss;
     ss << lon::getThreadId() << '\t' << msg << "\r\n";

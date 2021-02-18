@@ -1,4 +1,4 @@
-function(AddExeFromFilesWithLib Deps Libs Includes)
+﻿function(AddExeFromFilesWithLib Deps Libs Includes)
     foreach(FILEPATH ${ARGN})
         get_filename_component(FILE_NAME ${FILEPATH} NAME_WE)
 

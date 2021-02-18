@@ -171,7 +171,7 @@ public:
 class SimpleFileFlusher
     : public FileFlusher
     , public DirectFlusher
-
+     
 {
 public:
     SimpleFileFlusher(const char* filename) : FileFlusher{filename} {}

@@ -64,6 +64,8 @@ set(
     src/base/string_piece.cpp
     src/logging/logger_filename.cpp
     src/logging/logger_formatters.cpp
+    src/coroutine/executor.cpp
+    src/coroutine/scheduler.cpp
 )
 
 set(

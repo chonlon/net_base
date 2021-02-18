@@ -1,4 +1,4 @@
-#include "base/info.h"
+﻿#include "base/info.h"
 #include "base/expection.h"
 
 #include <unistd.h>
@@ -9,15 +9,12 @@
 #include <fmt/core.h>
 
 namespace lon {
-String G_HostName;
 thread_local uint32_t G_ThreadId = 0;
 thread_local String G_ThreadName = "UnSet";
 
 StringPiece getHostName() {
-    if (G_HostName.empty()) {
-        G_HostName = getHostWithoutBuffer();        
-    }
-    return StringPiece(G_HostName);
+    static String host_name = getHostWithoutBuffer(); // 使用static可以比起全局变量可以控制初始化顺序
+    return StringPiece(host_name);
 }
 
 String getHostWithoutBuffer() {

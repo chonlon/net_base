@@ -1,4 +1,4 @@
-#include "logger_filename.h"
+﻿#include "logger_filename.h"
 
 
 #include "config.h"
@@ -9,7 +9,7 @@
 
 namespace lon {
 
-
+//FIXME 这样的处理方法其实假定了只有一个日期格式, 所以有多个%d的就不能正确处理.
 LogFilenameData logFileNameParse(const String& pattern) {
     auto vec = logPatternParse(pattern);
     String prefix;
@@ -35,7 +35,7 @@ LogFilenameData logFileNameParse(const String& pattern) {
                 continue;
             }
             if (key == 'H') {
-                in_pre ? prefix += getHostWithoutBuffer() : postfix += getHostWithoutBuffer(); //���ڳ�ʼ��˳�򲻺ÿ���, ֻ��ʹ�ò���buffer��
+                in_pre ? prefix += getHostName() : postfix += getHostName();
                 continue;
             }
             if (key == 'P') {
