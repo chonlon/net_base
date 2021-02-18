@@ -8,6 +8,12 @@ void simplePrint() {
     std::cout << __FUNCTION__ << '\n';
 }
 
+void stSize() {
+    CaseMarker marker{"size"};
+    fmt::print("executor size:{}\n", sizeof(lon::coroutine::Executor));
+    fmt::print("scheduler size:{}\n", sizeof(lon::coroutine::Scheduler));
+}
+
 void runExecutor() {
     CaseMarker marker{"run executor"};
 
@@ -38,6 +44,7 @@ void runScheduler() {
         fmt::print("----{}-----\n", i);
     }
     scheduler.run();
+    scheduler.stop();
 }
 
 struct Initer {
@@ -56,8 +63,12 @@ thread_local Initer init{};
 Initer inittt;
 
 int main() {
+    
+
     runExecutor();
     runScheduler();
+
+    stSize();
     // std::vector<std::thread> thrs;
     // for(int i=0; i < 10; ++i) {
     //     thrs.emplace_back([](){

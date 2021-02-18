@@ -37,6 +37,8 @@ void Scheduler::threadScheduleFunc(int index) {
             }
         }
         if (executor == nullptr) { // 当前没有任务.
+            if(stopping_)
+                break;
             ++idle_thread_count_;
             block_pending_func_();
             --idle_thread_count_;

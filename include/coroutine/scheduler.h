@@ -110,8 +110,8 @@ private:
     }
 
 private:
-    bool stopping_{false};
-    bool stopped_{false};
+    std::atomic_bool stopping_{false};
+    std::atomic_bool stopped_{false};
     bool exit_with_tasks_processed{true};
     Mutex executors_mutex_{};
     BlockFuncType block_pending_func_{nullptr};
