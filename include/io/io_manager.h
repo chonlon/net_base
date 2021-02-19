@@ -7,16 +7,16 @@ namespace lon::io
 {
 
 /**
- * @brief Io管理入口
+ * @brief Io管理入口, 设计工作做单线程环境中.
 */
-class IoManager : public Noncopyable
+class IOManager : public Noncopyable
 {
 public:
     using EventCallbackType = std::function<void()>;
     // using FdEventDataType = std::pair<int, EventCallbackType>;
 
-    IoManager(size_t thread_count = coroutine::default_thread_count);
-    ~IoManager() = default;
+    IOManager(size_t thread_count = coroutine::default_thread_count);
+    ~IOManager() = default;
 
     enum EventType : uint32_t
     {

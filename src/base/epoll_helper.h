@@ -8,6 +8,6 @@ namespace lon {
         bzero(&ep_event, sizeof(struct epoll_event));
         ep_event.events = events;
         ep_event.data.fd = fd;
-        int ret = epoll_ctl(epfd, op, fd, &ep_event);
+        return epoll_ctl(epfd, op, fd, &ep_event);
 	}
 }

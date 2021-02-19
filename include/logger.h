@@ -21,7 +21,7 @@
                                   level,                              \
                                   lon::getThreadId(),                 \
                                   0,                                  \
-                                  lon::getFiberId(),                  \
+                                  lon::getExecutorId(),               \
                                   time(0) /*,lon::getThreadName()*/)) \
         .stream
 
@@ -46,10 +46,7 @@ namespace lon {
 constexpr int flusher_max = 10;
 class LogFlusher;
 class Logger;
-namespace detail {
-void initDefaultLogger();
-void initLoggerFromConfig();
-}  // namespace detail
+class _LogManager;
 
 enum Level
 {
@@ -71,7 +68,7 @@ struct LogEvent
     Level level;
     uint32_t thread_id;
     uint32_t elapsed_ms;
-    uint32_t fiber_id;
+    size_t executor_id;
     // StringPiece thread_name;
     StringPiece logger_name{};       // set in logger //耦合Logger
     StringPiece datetime_pattern{};  // set in logger //耦合Logger
@@ -89,14 +86,14 @@ struct LogEvent
              Level _level,
              uint32_t _thread_id,
              uint32_t _elapsed_ms,
-             uint32_t _fiber_id,
+             size_t _executor_id,
              time_t _time)
         : file_name{_file_name},
           line{_line},
           level{_level},
           thread_id{_thread_id},
           elapsed_ms{_elapsed_ms},
-          fiber_id{_fiber_id},
+          executor_id{_executor_id},
           time{_time} {}
 };
 
@@ -117,8 +114,7 @@ public:
 
 class Logger : public std::enable_shared_from_this<Logger>
 {
-    friend void detail::initDefaultLogger();
-    friend void detail::initLoggerFromConfig();
+    friend _LogManager;
 
 public:
     using StringStream  = std::stringstream;
@@ -188,9 +184,6 @@ private:
 
 class _LogManager : lon::Noncopyable
 {
-    friend void detail::initDefaultLogger();
-    friend void detail::initLoggerFromConfig();
-
 public:
     _LogManager();
 
@@ -205,6 +198,9 @@ public:
     }
 
 private:
+    void initDefaultLogger();
+    void initLoggerFromConfig();
+
     Logger::ptr default_logger_ = nullptr;
     std::unordered_map<String, Logger::ptr> loggers_{};
 };

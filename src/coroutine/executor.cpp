@@ -51,14 +51,16 @@ void Executor::executorMainFunc() {
 }
 
 Executor::~Executor() {
-    if (this == t_main_executor.get())
-        LON_LOG_ERROR(G_logger) << fmt::format(
-            "destroying thread main executor! thread id:{}, thread name:{}",
-            getThreadId(),
-            getThreadName());
+    if (this == t_main_executor.get()) //TODO 这个信息似乎不是很重要, 需要移除吗.
+        // 不能使用logger, 因为此时主协程正在析构.
+        fmt::print(
+            "notion: destroying thread main executor! thread id:{}, thread "
+            "name:{}\n",
+            getThreadIdRaw(),
+            getThreadNameRaw());
     executor_info::destroyUpdateData();
     executor_info::releaseId(id_);
-    
+
     if (stack_)
         free(stack_);
 }
@@ -191,8 +193,7 @@ void Executor::terminalInner() {
 
 void Executor::getCurrentContext() {
     if (getcontext(context_)) {
-        LON_LOG_ERROR(G_logger)
-                << "get context failed" << backtraceString();
+        LON_LOG_ERROR(G_logger) << "get context failed" << backtraceString();
     }
 }
 

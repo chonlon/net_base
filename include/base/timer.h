@@ -6,6 +6,7 @@
 
 #include <functional>
 #include <set>
+#include <iostream>
 
 namespace lon {
 struct Timer
@@ -15,7 +16,7 @@ struct Timer
 
     struct Comparator
     {
-        bool operator()(Timer& lhs, Timer& rhs) const {
+        bool operator()(const Timer& lhs, const Timer& rhs) const {
             return lhs.target_timestamp < rhs.target_timestamp;
         }
     };
@@ -72,7 +73,7 @@ public:
 
             for (auto& timer : result) {
                 if (timer.repeat) {
-                    Timer repeat_timer(timer.target_timestamp + timer.interval,
+                    Timer repeat_timer(timer.interval,
                                        timer.callback,
                                        true);
                     timers_.insert(std::move(repeat_timer));
@@ -102,11 +103,22 @@ public:
         std::lock_guard<Mutex> locker(timer_mutex_);
         if (timers_.empty())
             return false;
-        if (timers_.begin()->target_timestamp < cur_ms) {
+        if (timers_.begin()->target_timestamp <= cur_ms) {
             *timer = std::move(*timers_.begin());
             timers_.erase(timers_.begin());
+            if(timer->repeat) {
+                Timer repeat_timer(timer->interval,
+                    timer->callback,
+                    true);
+                timers_.insert(std::move(repeat_timer));
+            }
+            if(!timer->callback) {
+                return false;
+            }
+            return true;
+        } else {
+            return false;
         }
-        return true;
     }
 
 private:

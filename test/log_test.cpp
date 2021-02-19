@@ -37,7 +37,7 @@ TEST(LogTest, LogLeveltoString) {
 TEST(LogTest, LogLevel) {
     DECLEAR_LOGGER
     logger->setFormatters(
-        "%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
+        "%d{%Y-%m-%d %H:%M:%S}%T%t%T%E%T[%p]%T[%c]%T<%f:%l>%T%m%n");
 
     logger->setLevel(DEBUG);
     LON_LOG_DEBUG(logger) << "test";
@@ -72,7 +72,7 @@ TEST(LogTest, LogLevel) {
 TEST(LogTest, LogOut) {
     DECLEAR_LOGGER
     logger->setFormatters(
-        "%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
+        "%d{%Y-%m-%d %H:%M:%S}%T%t%T%E%T[%p]%T[%c]%T<%f:%l>%T%m%n");
 
     const char* file_name = "test.cc";
     int32_t line          = 10;

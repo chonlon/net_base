@@ -31,6 +31,7 @@ void runExecutor() {
 }
 
 void runScheduler() {
+    using namespace std::chrono_literals;
     CaseMarker marker{"run scheduler"};
     lon::coroutine::Scheduler scheduler;
     static int i = 0;
@@ -39,11 +40,12 @@ void runScheduler() {
         scheduler.addExecutor(std::make_shared<lon::coroutine::Executor>([]() 
         {
             fmt::print("current: {}, in executor {} at thread {}\n", ++i, lon::coroutine::Executor::getCurrent()->getId(), lon::getThreadId());
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(100ms);
         }));
         fmt::print("----{}-----\n", i);
     }
     scheduler.run();
+    std::this_thread::sleep_for(2s);
     scheduler.stop();
 }
 

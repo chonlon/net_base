@@ -18,6 +18,12 @@ bool Scheduler::addExecutor(Executor::Ptr executor, int32_t index) {
 
 void Scheduler::threadScheduleFunc(int index) {
     auto thread_main_executor = Executor::getCurrent();
+    {
+        String thread_name = "slaver ";
+        thread_name.append(std::to_string(index));
+        setThreadName(thread_name);
+        std::cout << thread_name;
+    }
 
     while (!stop_pending()) {
         Executor::Ptr executor = nullptr;

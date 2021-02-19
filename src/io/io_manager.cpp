@@ -12,18 +12,18 @@ constexpr int epoll_create_size = 1000;
 constexpr int epoll_wait_max_size = 64;
 Logger::ptr G_Logger = LogManager::getInstance()->getLogger("system");
 
-IoManager::IoManager(size_t thread_count)
+IOManager::IOManager(size_t thread_count)
     : scheduler_{thread_count} {
     scheduler_.setExitWithTasksProcessed(true);
-    scheduler_.setBlockPendingFunc(std::bind(&blockPending, this));
+    scheduler_.setBlockPendingFunc(std::bind(&IOManager::blockPending, this));
 
     initEpoll();
     initPipe();
 }
 
-bool IoManager::registerEvent(int fd,
+bool IOManager::registerEvent(int fd,
                               EventType type,
-                              EventCallbackType callback) noexcept {
+                              EventCallbackType callback) {
     if (stopped)
         return false;
     if (static_cast<size_t>(fd) > fd_events_.size()) {
@@ -79,7 +79,7 @@ bool IoManager::registerEvent(int fd,
     return true;
 }
 
-bool IoManager::hasEvent(int fd, EventType type) {
+bool IOManager::hasEvent(int fd, EventType type) {
     //
     // if(type == Read) {
     //     if(static_cast<size_t>(fd) > fd_read_callbacks_.size()) return false;
@@ -95,12 +95,12 @@ bool IoManager::hasEvent(int fd, EventType type) {
     return fd_events_[fd] & type;
 }
 
-void IoManager::cancelEvent(int fd, uint32_t type) {
+void IOManager::cancelEvent(int fd, uint32_t type) {
     if (static_cast<size_t>(fd) > fd_events_.size()) {
         return;
     }
 
-    std::lock_guard<Mutex> lock_guard(fd_events_mutex_);
+    std::lock_guard<Mutex> fd_locker(fd_events_mutex_);
     uint32_t events_dst = ~fd_events_[fd] & type;
     fd_events_mutex_.unlock();
 
@@ -120,7 +120,7 @@ void IoManager::cancelEvent(int fd, uint32_t type) {
     }
 }
 
-bool IoManager::registerTimer(Timer timer) {
+bool IOManager::registerTimer(Timer timer) {
     if(stopped) return false;
     assert(timer.callback);
     timer_manager_.addTimer(std::move(timer));
@@ -128,12 +128,12 @@ bool IoManager::registerTimer(Timer timer) {
     return true;
 }
 
-void IoManager::stop() {
+void IOManager::stop() {
     stopped = true;
     scheduler_.stop();
 }
 
-void IoManager::initEpoll() {
+void IOManager::initEpoll() {
     epoll_fd_ = epoll_create(epoll_create_size);
     if (epoll_fd_ == -1) {
         LON_LOG_ERROR(G_Logger) << fmt::format(
@@ -143,7 +143,7 @@ void IoManager::initEpoll() {
     }
 }
 
-void IoManager::initPipe() {
+void IOManager::initPipe() {
     int ret = pipe(wakeup_pipe_fd_);
     LON_ERROR_INVOKE_ASSERT(ret != -1, "pipe open", G_Logger);
 
@@ -153,29 +153,31 @@ void IoManager::initPipe() {
     epollAdd(wakeup_pipe_fd_[0], EPOLLIN | EPOLLOUT);
 }
 
-void IoManager::wakeUpIfBlocking() {
+void IOManager::wakeUpIfBlocking() {
     if (scheduler_.getIdleThreadCount() != 0)
         write(wakeup_pipe_fd_[1], "1", 1);
 }
 
-void IoManager::epollAdd(int fd, uint32_t events) const {
+void IOManager::epollAdd(int fd, uint32_t events) const {
     const int ret = epollOperation(epoll_fd_, EPOLL_CTL_ADD, events, fd);
     LON_ERROR_INVOKE_ASSERT(ret != -1, "epoll_ctl", G_Logger);
 }
 
-void IoManager::epollMod(int fd, uint32_t events) const {
+void IOManager::epollMod(int fd, uint32_t events) const {
     const int ret = epollOperation(epoll_fd_, EPOLL_CTL_MOD, events,fd);
     LON_ERROR_INVOKE_ASSERT(ret != -1, "epoll_ctl", G_Logger);
 }
 
-void IoManager::epollDel(int fd) const {
+void IOManager::epollDel(int fd) const {
     const int ret = epollOperation(epoll_fd_, EPOLL_CTL_DEL, EPOLLET, fd);
     LON_ERROR_INVOKE_ASSERT(ret != -1, "epoll_ctl", G_Logger);
 }
 
-void IoManager::blockPending() {
+void IOManager::blockPending() {
     int next_interval = static_cast<int>(timer_manager_.getNextInterval());
-
+    if(next_interval == 0 || next_interval == -1) {
+        std::cout << "--interval stopping!";
+    }
     struct epoll_event epoll_events[epoll_wait_max_size];
     int ret = epoll_wait(epoll_fd_, epoll_events, epoll_wait_max_size, next_interval);
 
@@ -183,6 +185,8 @@ void IoManager::blockPending() {
     Timer::MsStampType cur_ms = currentMs();
     while(timer_manager_.getFirstIfExpired(&exec_timer, cur_ms)) {
         exec_timer.callback();
+        // auto ms = currentMs();
+        // std::cout << "--- " << ms << "--" << cur_ms << "--" << ms - cur_ms << " ---\n";
     }
 
     for (int i = 0; i < ret; ++i) {

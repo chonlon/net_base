@@ -44,8 +44,8 @@ void lineNumberFormatter(Logger::StringStream& stream,
     stream << event->line;
 }
 
-void fiberIdFormatter(Logger::StringStream& stream, LogEvent* event) noexcept {
-    stream << event->fiber_id;
+void executorIdFormatter(Logger::StringStream& stream, LogEvent* event) noexcept {
+    stream << event->executor_id;
 }
 
 void tabFormatter(Logger::StringStream& stream, LogEvent* event) noexcept {
@@ -88,8 +88,8 @@ Logger::FormatterFunc LogFormatterFactory::getFormatter(
             return &filenameFormatter;
         case 'l':
             return &lineNumberFormatter;
-        case 'F':
-            return &fiberIdFormatter;
+        case 'E':
+            return &executorIdFormatter;
         case 'T':
             return &tabFormatter;
         default:

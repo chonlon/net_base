@@ -7,10 +7,15 @@
 #include <stdlib.h>
 #include <cstring>
 #include <fmt/core.h>
+#include "coroutine/executor.h"
 
 namespace lon {
 thread_local uint32_t G_ThreadId = 0;
 thread_local String G_ThreadName = "UnSet";
+
+size_t getExecutorId() {
+    return coroutine::Executor::getCurrent()->getId();
+}
 
 StringPiece getHostName() {
     static String host_name = getHostWithoutBuffer(); // 使用static可以比起全局变量可以控制初始化顺序

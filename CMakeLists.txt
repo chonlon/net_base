@@ -66,6 +66,7 @@ set(
     src/logging/logger_formatters.cpp
     src/coroutine/executor.cpp
     src/coroutine/scheduler.cpp
+    src/io/io_manager.cpp
 )
 
 set(
