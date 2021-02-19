@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "base/timer.h"
 #include "coroutine/scheduler.h"
 #include <sys/epoll.h>
 
@@ -35,6 +36,13 @@ public:
     bool hasEvent(int fd, EventType type);
     void cancelEvent(int fd, uint32_t types);
 
+    /**
+     * @brief 注册定时器.
+     * @param timer 定时器, 带回调, 注册回调应不为空.
+     * @return 是否注册成功, 如果IoManager已经stop, 那么注册会失败.
+    */
+    bool registerTimer(Timer timer);
+
     void run() {
         scheduler_.run();
     }
@@ -49,11 +57,11 @@ private:
     void initPipe();
 
     // wake up from epoll_wait if blocking.
-    void wakeUpIf();
+    void wakeUpIfBlocking();
 
     void epollAdd(int fd, uint32_t events) const;
     void epollMod(int fd, uint32_t events) const;
-    void epollDel(int fd);
+    void epollDel(int fd) const;
 
     /**
      * @brief run in scheduler slave thread.
@@ -64,6 +72,7 @@ private:
     int epoll_fd_{ -1 };// TODO 使每一个线程都分配一个epoll更合理, 但是更复杂.
     int wakeup_pipe_fd_[2]{-1,-1};
     coroutine::Scheduler scheduler_;
+    TimerManager timer_manager_;
     Mutex read_cb_mutex_;
     std::vector<EventCallbackType> fd_read_callbacks_;
     Mutex write_cb_mutex_;

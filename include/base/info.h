@@ -3,6 +3,7 @@
 #include "typedef.h"
 #include "macro.h"
 #include "string_piece.h"
+#include <sys/time.h>
 
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -47,5 +48,11 @@ namespace lon {
 
     inline pid_t getUid() {
         return ::getuid();
+    }
+
+    size_t currentMs() {
+        struct timeval _timerval;
+        gettimeofday(&_timerval,nullptr);
+        return _timerval.tv_sec * 1000 + _timerval.tv_usec / 1000;
     }
 }

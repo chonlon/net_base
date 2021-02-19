@@ -30,15 +30,15 @@ bool IoManager::registerEvent(int fd,
         // fd_events_.resize(static_cast<size_t>(fd));
         {
             std::lock_guard<Mutex> lock_guard(fd_events_mutex_);
-            fd_events_.resize(static_cast<size_t>(fd));
+            fd_events_.resize(static_cast<size_t>(fd * 1.5));
         }
         {
             std::lock_guard<Mutex> lock_guard(read_cb_mutex_);
-            fd_read_callbacks_.resize(static_cast<size_t>(fd));
+            fd_read_callbacks_.resize(static_cast<size_t>(fd * 1.5));
         }
         {
             std::lock_guard<Mutex> lock_guard(write_cb_mutex_);
-            fd_write_callbacks_.resize(static_cast<size_t>(fd));
+            fd_write_callbacks_.resize(static_cast<size_t>(fd * 1.5));
         }
     }
 
@@ -120,6 +120,14 @@ void IoManager::cancelEvent(int fd, uint32_t type) {
     }
 }
 
+bool IoManager::registerTimer(Timer timer) {
+    if(stopped) return false;
+    assert(timer.callback);
+    timer_manager_.addTimer(std::move(timer));
+    wakeUpIfBlocking();
+    return true;
+}
+
 void IoManager::stop() {
     stopped = true;
     scheduler_.stop();
@@ -145,7 +153,7 @@ void IoManager::initPipe() {
     epollAdd(wakeup_pipe_fd_[0], EPOLLIN | EPOLLOUT);
 }
 
-void IoManager::wakeUpIf() {
+void IoManager::wakeUpIfBlocking() {
     if (scheduler_.getIdleThreadCount() != 0)
         write(wakeup_pipe_fd_[1], "1", 1);
 }
@@ -160,15 +168,23 @@ void IoManager::epollMod(int fd, uint32_t events) const {
     LON_ERROR_INVOKE_ASSERT(ret != -1, "epoll_ctl", G_Logger);
 }
 
-void IoManager::epollDel(int fd) {
+void IoManager::epollDel(int fd) const {
     const int ret = epollOperation(epoll_fd_, EPOLL_CTL_DEL, EPOLLET, fd);
     LON_ERROR_INVOKE_ASSERT(ret != -1, "epoll_ctl", G_Logger);
 }
 
 void IoManager::blockPending() {
+    int next_interval = static_cast<int>(timer_manager_.getNextInterval());
 
     struct epoll_event epoll_events[epoll_wait_max_size];
-    int ret = epoll_wait(epoll_fd_, epoll_events, epoll_wait_max_size, 0);
+    int ret = epoll_wait(epoll_fd_, epoll_events, epoll_wait_max_size, next_interval);
+
+    Timer exec_timer(0);
+    Timer::MsStampType cur_ms = currentMs();
+    while(timer_manager_.getFirstIfExpired(&exec_timer, cur_ms)) {
+        exec_timer.callback();
+    }
+
     for (int i = 0; i < ret; ++i) {
         auto ep_event = epoll_events[i];
         if (ep_event.data.fd == wakeup_pipe_fd_[0]) {
