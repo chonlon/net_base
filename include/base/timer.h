@@ -4,6 +4,8 @@
 #include "typedef.h"
 
 
+
+#include <cassert>
 #include <functional>
 #include <set>
 #include <iostream>
@@ -51,6 +53,7 @@ class TimerManager : public Noncopyable
 public:
     void addTimer(Timer timer) {
         std::lock_guard<Mutex> locker(timer_mutex_);
+        assert(timer.callback != nullptr);
         timers_.insert(std::move(timer));
     }
 

@@ -45,7 +45,7 @@ public:
      * @param index 指定线程的index, 如果指定线程为0, 则为随机线程执行
      * @return 如果scheduler正在停止, 那么会拒绝添加任务, 返回false. 添加成功返回true.
     */
-    bool addExecutor(Executor::Ptr executor, int32_t index = 0);
+    bool addExecutor(Executor::Ptr executor, size_t index = 0);
 
     void run() {
         for (size_t i = 1; i <= threads_count_; ++i) {
@@ -62,6 +62,8 @@ public:
             // executors_.clear();
             stopped_ = true;
         }
+
+        
     }
 
 
@@ -103,7 +105,7 @@ public:
     }
 
 private:
-    void threadScheduleFunc(int index);
+    void threadScheduleFunc(size_t index);
 
     bool stop_pending() {
         return stopped_ && stop_pending_func_();

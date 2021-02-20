@@ -2,6 +2,8 @@
 #include "base/macro.h"
 #include "base/typedef.h"
 #include "executor.h"
+
+#include <cassert>
 #include <functional>
 #include <memory>
 #include <ucontext.h>
@@ -61,7 +63,7 @@ public:
      * @brief Construct a new Executor object by callback.
      * 
      * @param _stack_size runing stack size.
-     * @param _callback  runing callback.
+     * @param _callback  runing callback, not null.
      */
     Executor(ExectutorFunc _callback, size_t _stack_size = 8 * data::K)
         : state_{State::Init},
@@ -69,6 +71,7 @@ public:
           stack_size_{_stack_size},
           stack_{nullptr},
           callback_{_callback} {
+        assert(callback_ != nullptr);
         executor_info::createUpdateData();
     }
 

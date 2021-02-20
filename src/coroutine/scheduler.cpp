@@ -5,24 +5,25 @@ static auto G_logger = lon::LogManager::getInstance()->getLogger("system");
 namespace lon::coroutine {
 
 
-bool Scheduler::addExecutor(Executor::Ptr executor, int32_t index) {
+bool Scheduler::addExecutor(Executor::Ptr executor, size_t index) {
     if(stopping_) return false;
     std::lock_guard<Mutex> locker(executors_mutex_);
     if(index == 0) {
         executors_.front().push(executor);
     } else {
+        // index 可能越界.
+        index %= threads_count_;
         executors_[index].push(executor);
     }
     return true;
 }
 
-void Scheduler::threadScheduleFunc(int index) {
+void Scheduler::threadScheduleFunc(size_t index) {
     auto thread_main_executor = Executor::getCurrent();
     {
         String thread_name = "slaver ";
         thread_name.append(std::to_string(index));
         setThreadName(thread_name);
-        std::cout << thread_name;
     }
 
     while (!stop_pending()) {

@@ -63,6 +63,8 @@ Executor::~Executor() {
 
     if (stack_)
         free(stack_);
+    if(context_)
+        delete context_;
 }
 
 void Executor::exec() {
