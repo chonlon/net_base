@@ -5,6 +5,7 @@
     runner_config.cpp
     runner_executor.cpp
     runner_iomanager.cpp
+    runner_hook.cpp
 )
 
 configure_file("../bin/conf/test.yml" "${EXECUTABLE_OUTPUT_PATH}/conf/test.yml" COPYONLY)

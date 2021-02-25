@@ -19,6 +19,7 @@ void createUpdateData() noexcept;
 void destroyUpdateData() noexcept;
 }  // namespace executor_info
 
+constexpr int DefaultStackSize = 64 * data::K;
 
 void callerExecutorFunc();
 
@@ -40,7 +41,7 @@ public:
         Init,
         Exec,
         Ready,
-        HoldUp,
+        HoldUp,//挂起, 空闲时被唤醒.
         Terminal,
         Aborted  // 异常终止
     };
@@ -62,10 +63,10 @@ public:
     /**
      * @brief Construct a new Executor object by callback.
      * 
-     * @param _stack_size runing stack size.
-     * @param _callback  runing callback, not null.
+     * @param _stack_size running stack size.
+     * @param _callback  running callback, not null.
      */
-    Executor(ExectutorFunc _callback, size_t _stack_size = 8 * data::K)
+    Executor(ExectutorFunc _callback, size_t _stack_size = DefaultStackSize)
         : state_{State::Init},
           id_{executor_info::idGenerate()},
           stack_size_{_stack_size},
@@ -89,15 +90,20 @@ public:
     // Exec --> Holdup
     void yield();
 
+    // // Exec/Holdup--> Blocking
+    // void block();
+    //
+    // // Blocking
+    // void unblock();
 
-    // any --> aborted
+    // any --> terminal
     void kill();
 
-
+    
     LON_NODISCARD auto getState() const -> State {
         return state_;
     }
-
+    
     LON_NODISCARD auto getId() const -> uint64_t {
         return id_;
     }
@@ -117,11 +123,8 @@ public:
      */
     static Ptr getCurrent();
 
-    /**
-     * @brief init thread main executor
-     * @return main executor ptr.
-     */
-    static Ptr initMainExecutor();
+
+    static void setMainExecutor(Executor::Ptr executor);
 
 private:
     void terminal();

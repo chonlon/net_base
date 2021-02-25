@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <memory>
 #include <functional>
-#include <queue>
+#include <list>
 #include <atomic>
 
 
@@ -46,6 +46,9 @@ public:
      * @return 如果scheduler正在停止, 那么会拒绝添加任务, 返回false. 添加成功返回true.
     */
     bool addExecutor(Executor::Ptr executor, size_t index = 0);
+
+    void removeExecutor(Executor::Ptr executor);
+
 
     void run() {
         for (size_t i = 1; i <= threads_count_; ++i) {
@@ -119,7 +122,7 @@ private:
     BlockFuncType block_pending_func_{nullptr};
     StopFuncType stop_pending_func_{nullptr};
     std::vector<Thread> exec_threads_{};
-    std::vector<std::queue<Executor::Ptr>> executors_{};
+    std::vector<std::list<Executor::Ptr>> executors_{};
     size_t threads_count_;
     std::atomic<size_t> idle_thread_count_ = 0;
     std::atomic<size_t> executors_count_   = 0;

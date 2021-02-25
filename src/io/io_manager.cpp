@@ -8,11 +8,14 @@
 #include <unistd.h>
 
 namespace lon::io {
-constexpr int epoll_create_size   = 1000;
+thread_local std::unique_ptr<IOManager> t_io_manager = nullptr;
+
+constexpr int epoll_create_size = 1000;
 constexpr int epoll_wait_max_size = 64;
 Logger::ptr G_Logger = LogManager::getInstance()->getLogger("system");
 
-IOManager::IOManager(size_t thread_count) : scheduler_{thread_count} {
+IOManager::IOManager(size_t thread_count)
+    : scheduler_{thread_count} {
     scheduler_.setExitWithTasksProcessed(true);
     scheduler_.setBlockPendingFunc(std::bind(&IOManager::blockPending, this));
 
@@ -22,7 +25,7 @@ IOManager::IOManager(size_t thread_count) : scheduler_{thread_count} {
 
 bool IOManager::registerEvent(int fd,
                               EventType type,
-                              EventCallbackType callback) {
+                              coroutine::Executor::Ptr executor) {
     if (stopped)
         return false;
     if (static_cast<size_t>(fd) > fd_events_.size()) {
@@ -33,15 +36,16 @@ bool IOManager::registerEvent(int fd,
         }
         {
             std::lock_guard<Mutex> lock_guard(read_cb_mutex_);
-            fd_read_callbacks_.resize(static_cast<size_t>(fd * 1.5));
+            fd_read_executors_.resize(static_cast<size_t>(fd * 1.5));
         }
         {
             std::lock_guard<Mutex> lock_guard(write_cb_mutex_);
-            fd_write_callbacks_.resize(static_cast<size_t>(fd * 1.5));
+            fd_write_executors_.resize(static_cast<size_t>(fd * 1.5));
         }
     }
 
-    auto epAdd = [fd, type, this]() {
+    auto epAdd = [fd, type, this]()
+    {
         std::lock_guard<Mutex> lock_guard(fd_events_mutex_);
         uint32_t events_dst = fd_events_[fd] | type;
         if (fd_events_[fd]) {
@@ -51,13 +55,13 @@ bool IOManager::registerEvent(int fd,
         }
     };
     if (type == Read) {
-        // addTo(fd_read_callbacks_, read_cb_mutex_);
+        // addTo(fd_read_executors_, read_cb_mutex_);
         std::lock_guard<Mutex> lock_guard(read_cb_mutex_);
-        fd_read_callbacks_[fd] = std::move(callback);
+        fd_read_executors_[fd] = std::move(executor);
         epAdd();
     } else if (type == Write) {
         std::lock_guard<Mutex> lock_guard(write_cb_mutex_);
-        fd_write_callbacks_[fd] = std::move(callback);
+        fd_write_executors_[fd] = std::move(executor);
         epAdd();
     } else {
         return false;
@@ -87,25 +91,30 @@ void IOManager::cancelEvent(int fd, uint32_t type) {
         epollDel(fd);
     }
     if (!(events_dst & Read) &&
-        hasEvent(fd,
-                 Read)) {  // read的callback已注册, 并且需要清除的事件有read,
-                           // 则将read的callback删除.
+        hasEvent(fd, Read)) {
+        // read的callback已注册, 并且需要清除的事件有read,
+        // 则将read的callback删除.
         std::lock_guard<Mutex> lock_guard(read_cb_mutex_);
-        fd_read_callbacks_[fd] = nullptr;
+        fd_read_executors_[fd] = nullptr;
     }
-    if (!(events_dst & Write) && hasEvent(fd, Write)) {  // 同上read.
+    if (!(events_dst & Write) && hasEvent(fd, Write)) {
+        // 同上read.
         std::lock_guard<Mutex> lock_guard(write_cb_mutex_);
-        fd_write_callbacks_[fd] = nullptr;
+        fd_write_executors_[fd] = nullptr;
     }
 }
 
-bool IOManager::registerTimer(Timer timer) {
+bool IOManager::registerTimer(Timer::Ptr timer) {
     if (stopped)
         return false;
-    assert(timer.callback);
+    assert(timer->callback);
     timer_manager_.addTimer(std::move(timer));
     wakeUpIfBlocking();
     return true;
+}
+
+void IOManager::cancelTimer(Timer::Ptr timer) {
+    timer_manager_.removeTimer(timer);
 }
 
 void IOManager::stop() {
@@ -114,11 +123,21 @@ void IOManager::stop() {
     wakeUpIfBlocking();
 }
 
+
+IOManager* IOManager::getThreadLocal() {
+    if (t_io_manager)
+        return t_io_manager.get();
+
+    t_io_manager = std::make_unique<IOManager>();
+    return t_io_manager.get();
+}
+
 void IOManager::initEpoll() {
     epoll_fd_ = epoll_create(epoll_create_size);
     if (epoll_fd_ == -1) {
         LON_LOG_ERROR(G_Logger) << fmt::format(
-            "epoll create failed, with error: {}", std::strerror(errno));
+            "epoll create failed, with error: {}",
+            std::strerror(errno));
         assert(false);
     }
 }
@@ -163,12 +182,12 @@ void IOManager::blockPending() {
     int ret =
         epoll_wait(epoll_fd_, epoll_events, epoll_wait_max_size, next_interval);
 
-    Timer exec_timer(0);
+    Timer::Ptr exec_timer     = std::make_shared<Timer>(0);
     Timer::MsStampType cur_ms = currentMs();
-    while (timer_manager_.getFirstIfExpired(&exec_timer, cur_ms)) {
+    while (timer_manager_.getFirstIfExpired(exec_timer, cur_ms)) {
         // exec_timer.callback();
         scheduler_.addExecutor(std::make_shared<coroutine::Executor>(
-            std::move(exec_timer.callback)));
+            std::move(exec_timer->callback)));
     }
 
     for (int i = 0; i < ret; ++i) {
@@ -180,17 +199,15 @@ void IOManager::blockPending() {
             if (ep_event.events == EPOLLIN) {
                 std::lock_guard<Mutex> lock_guard(read_cb_mutex_);
                 bool add_ret = scheduler_.addExecutor(
-                    std::make_shared<coroutine::Executor>(
-                        fd_read_callbacks_[epoll_events->data.fd]));
+                    fd_read_executors_[epoll_events->data.fd]);
                 assert(add_ret);
             } else {
                 std::lock_guard<Mutex> lock_guard(write_cb_mutex_);
                 bool add_ret = scheduler_.addExecutor(
-                    std::make_shared<coroutine::Executor>(
-                        fd_write_callbacks_[epoll_events->data.fd]));
+                    fd_write_executors_[epoll_events->data.fd]);
                 assert(add_ret);
             }
         }
     }
 }
-}  // namespace lon::io
+} // namespace lon::io

@@ -20,7 +20,7 @@ void runEventServer() {
 
     ::bind(socket, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr));
     ::listen(socket, 64);
-    io_manager.registerEvent(socket, IOManager::Read, [socket]() {
+    io_manager.registerEvent(socket, IOManager::Read, std::make_shared<coroutine::Executor>([socket]() {
         fmt::print("connect coming\n");
         sockaddr_in accept_addr;
         socklen_t len = sizeof(sockaddr);
@@ -28,7 +28,8 @@ void runEventServer() {
             ::accept(socket, reinterpret_cast<sockaddr*>(&accept_addr), &len);
         fcntl(accept_fd, F_SETFL, O_NONBLOCK);
 
-        io_manager.registerEvent(accept_fd, IOManager::Read, [accept_fd]() {
+        io_manager.registerEvent(accept_fd, IOManager::Read,
+            std::make_shared<coroutine::Executor>([accept_fd]() {
             char buf[1024]{};
             ssize_t nread = 0;
             ssize_t _len  = 0;
@@ -44,8 +45,8 @@ void runEventServer() {
             } else {
                 fmt::print("read: {}\n", buf);
             }
-        });
-    });
+        }));
+    }));
 }
 
 void runEventClient() {
@@ -75,7 +76,7 @@ void runEvent() {
 void runTimer(Timer::MsStampType interval) {
     CaseMarker marker("run Timer");
     static int count = 0;
-    io_manager.registerTimer(Timer(
+    io_manager.registerTimer(std::make_shared<Timer>(
         interval,
         []() { std::cout << ++count << " at " << getThreadNameRaw() << '\n'; },
         true));

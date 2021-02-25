@@ -10,7 +10,7 @@ static auto G_logger = lon::LogManager::getInstance() -> getLogger("system");
 
 namespace lon {
 namespace coroutine {
-constexpr int DefaultStackSize = 8 * data::K;
+
 
 thread_local Executor::Ptr t_cur_executor{nullptr};
 thread_local Executor::Ptr t_main_executor{nullptr};
@@ -45,6 +45,7 @@ void Executor::executorMainFunc() {
         assert(t_cur_executor->callback_);
         t_cur_executor->callback_();
     } catch (...) {
+        t_cur_executor->state_ = State::Aborted;
         throw;
     }
     t_cur_executor->terminal();
@@ -104,9 +105,26 @@ void Executor::yield() {
     yieldInner();
 }
 
+// void Executor::block() {
+//     if(state_ == State::Exec) {
+//         state_ = State::Blocking;
+//         yieldInner();
+//     } else if(state_ == State::HoldUp) {
+//         state_ = State::Blocking;
+//     } else {
+//         return;
+//     }
+// }
+//
+// void Executor::unblock() {
+//     if (state_ == State::Blocking) {
+//         state_ = State::HoldUp;
+//     }
+// }
+
 void Executor::kill() {
     State cur_state = state_;
-    state_          = State::Aborted;
+    state_          = State::Terminal;
     if (cur_state == State::Exec)
         terminalInner();
 }
@@ -156,18 +174,19 @@ void Executor::makeContext() {
     makecontext(context_, &executorMainFunc, 0);
 }
 
-Executor::Ptr Executor::initMainExecutor() {
-    Ptr thread_main_executor = std::make_shared<Executor>();
-    t_main_executor          = thread_main_executor;
-    t_cur_executor           = thread_main_executor;
-    return thread_main_executor;
+
+void Executor::setMainExecutor(Executor::Ptr executor) {
+    t_main_executor = executor;
 }
 
 Executor::Ptr Executor::getCurrent() {
     if (t_cur_executor)
         return t_cur_executor;
+    
+    t_cur_executor = std::make_shared<Executor>();
+    if(!t_main_executor) setMainExecutor(t_cur_executor);
 
-    return initMainExecutor();
+    return t_cur_executor;
 }
 
 size_t Executor::getCurrentId() {

@@ -67,6 +67,8 @@ set(
     src/coroutine/executor.cpp
     src/coroutine/scheduler.cpp
     src/io/io_manager.cpp
+    src/io/hook.cpp
+    src/io/co_io_function.cpp
 )
 
 set(
@@ -77,6 +79,7 @@ set(
     nlohmann_json
     nlohmann_json::nlohmann_json
     pthread
+    dl
 )
 
 if(EnableStaticLibBuild)

@@ -14,6 +14,12 @@ using StringPiece = std::string_view;
 using Thread = std::thread;
 using Mutex = std::mutex;
 using RWMutex = std::shared_mutex;
+
+template <typename T>
+using ReadLocker = std::shared_lock<T>;
+template<typename T>
+using WriteLocker = std::unique_lock<T>;
+
 using ConditionVar = std::condition_variable;
 
 using size_t = std::size_t;

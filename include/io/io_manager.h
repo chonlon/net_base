@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "base/timer.h"
+#include "coroutine/executor.h"
 #include "coroutine/scheduler.h"
 #include <sys/epoll.h>
 
@@ -12,8 +13,7 @@ namespace lon::io
 class IOManager : public Noncopyable
 {
 public:
-    using EventCallbackType = std::function<void()>;
-    // using FdEventDataType = std::pair<int, EventCallbackType>;
+    
 
     IOManager(size_t thread_count = coroutine::default_thread_count);
     ~IOManager() = default;
@@ -28,20 +28,30 @@ public:
      * @brief 对fd对应的io时间注册回调, 线程安全, 如果对应的callback已存在, 那么将会替换已注册的.
      * @param fd io的fd
      * @param type 读写类型
-     * @param callback 事件对应的回调.
+     * @param executor 事件对应的执行协程.
      * @exception bad_alloc from vector resize
      * @return 是否注册成功, 如果IOManager已经stop或者type错误, 注册会失败.
     */
-    bool registerEvent(int fd, EventType type, EventCallbackType callback);
+    bool registerEvent(int fd, EventType type, coroutine::Executor::Ptr executor);
     bool hasEvent(int fd, EventType type);
     void cancelEvent(int fd, uint32_t types);
+
+    void addExecutor(coroutine::Executor::Ptr executor) {
+        scheduler_.addExecutor(executor);
+    }
+
+    void removeExecutor(coroutine::Executor::Ptr executor) {
+        scheduler_.removeExecutor(executor);
+    }
 
     /**
      * @brief 注册定时器.
      * @param timer 定时器, 带回调, 注册回调应不为空.
      * @return 是否注册成功, 如果IoManager已经stop, 那么注册会失败.
     */
-    bool registerTimer(Timer timer);
+    bool registerTimer(Timer::Ptr timer);
+
+    void cancelTimer(Timer::Ptr timer);
 
     void run() {
         scheduler_.run();
@@ -52,6 +62,12 @@ public:
     void setExitWithTasksProcessed(bool _exit_with_tasks_processed) {
         scheduler_.setExitWithTasksProcessed(_exit_with_tasks_processed);
     }
+
+    /**
+     * @brief 获取当前线程的IOManager.
+     * @return IOManager指针, 返回不拥有指针所有权, 指针有效期与thread local变量相同.
+    */
+    static IOManager* getThreadLocal();
 private:
     void initEpoll();
     void initPipe();
@@ -74,12 +90,13 @@ private:
     coroutine::Scheduler scheduler_;
     TimerManager timer_manager_;
     Mutex read_cb_mutex_;
-    std::vector<EventCallbackType> fd_read_callbacks_;
+    std::vector<coroutine::Executor::Ptr> fd_read_executors_;
     Mutex write_cb_mutex_;
-    std::vector<EventCallbackType> fd_write_callbacks_;
+    std::vector<coroutine::Executor::Ptr> fd_write_executors_;
     Mutex fd_events_mutex_;
     std::vector<uint32_t> fd_events_;
 };
+
 
 
 } // namespace lon::io
