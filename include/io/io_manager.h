@@ -8,14 +8,15 @@ namespace lon::io
 {
 
 /**
- * @brief Io管理入口, 设计工作做单线程环境中.
+ * @brief Io管理入口, 设计工作在单线程环境中. 协程实体对应关系是:  1Thread-->IOManager-->1Scheduler-->N Executor.
+ * 
 */
 class IOManager : public Noncopyable
 {
 public:
     
 
-    IOManager(size_t thread_count = coroutine::default_thread_count);
+    IOManager();
     ~IOManager() = default;
 
     enum EventType : uint32_t
@@ -25,7 +26,7 @@ public:
     };
 
     /**
-     * @brief 对fd对应的io时间注册回调, 线程安全, 如果对应的callback已存在, 那么将会替换已注册的.
+     * @brief 对fd对应的io事件注册回调, 线程安全, 如果对应的callback已存在, 那么将会替换已注册的.
      * @param fd io的fd
      * @param type 读写类型
      * @param executor 事件对应的执行协程.
@@ -85,16 +86,13 @@ private:
     void blockPending();
 
     bool stopped{false};
-    int epoll_fd_{ -1 };// TODO 使每一个线程都分配一个epoll更合理, 但是更复杂.
+    int epoll_fd_{ -1 };
     int wakeup_pipe_fd_[2]{-1,-1};
     coroutine::Scheduler scheduler_;
     TimerManager timer_manager_;
-    Mutex read_cb_mutex_;
-    std::vector<coroutine::Executor::Ptr> fd_read_executors_;
-    Mutex write_cb_mutex_;
-    std::vector<coroutine::Executor::Ptr> fd_write_executors_;
-    Mutex fd_events_mutex_;
-    std::vector<uint32_t> fd_events_;
+    std::vector<coroutine::Executor::Ptr> fd_read_executors_;//fd对应的读事件执行器
+    std::vector<coroutine::Executor::Ptr> fd_write_executors_;//fd对应的写事件执行器
+    std::vector<uint32_t> fd_events_;//fd 已注册事件类型
 };
 
 

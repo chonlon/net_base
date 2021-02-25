@@ -1,4 +1,6 @@
 ﻿#include "coroutine/scheduler.h"
+#include "io/hook.h"
+
 
 #include <base/print_helper.h>
 #include <coroutine/executor.h>
@@ -65,7 +67,7 @@ thread_local Initer init{};
 Initer inittt;
 
 int main() {
-    
+    lon::io::setHookEnabled(false);
 
     runExecutor();
     runScheduler();

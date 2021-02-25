@@ -14,6 +14,7 @@ namespace coroutine {
 
 thread_local Executor::Ptr t_cur_executor{nullptr};
 thread_local Executor::Ptr t_main_executor{nullptr};
+thread_local Executor::Ptr t_base_executor{nullptr};
 
 std::atomic<size_t> least_unallocated_id{0};
 std::atomic<size_t> executor_count{0};
@@ -69,33 +70,11 @@ Executor::~Executor() {
 }
 
 void Executor::exec() {
-    assert(this !=
-           t_main_executor
-               .get());  //当前逻辑exec是切换当main_executor执行,
-                         //使用t_main_executor调用executor相当于没有调用.
+    assert(this != t_main_executor.get());  //当前逻辑exec是切换当main_executor执行,
+                                            //使用t_main_executor调用executor相当于没有调用.
 
-    switch (state_) {
-        case State::Init:
-            initToReady();
-            [[fallthrough]];
-        case State::HoldUp:
-        case State::Ready:
-            state_ = State::Exec;
-            execInner();
-            break;
-        case State::Exec:
-            LON_LOG_DEBUG(G_logger)
-                << getCurrentId() << " is executing, do nothing\n";
-            break;
-        case State::Terminal:
-        case State::Aborted:
-            LON_LOG_WARN(G_logger)
-                << getCurrentId() << " has terminal or aborted, do nothing\n";
-            break;
-        default:
-            LON_LOG_ERROR(G_logger) << "state may be not init!!!";
-            break;
-    }
+    doExec(false);
+
 }
 
 void Executor::yield() {
@@ -140,14 +119,17 @@ void Executor::terminal() {
 
 void Executor::reset(ExectutorFunc func, bool back_to_caller) {
     callback_ = func;
-    makeContext();
+    if(stack_)
+        resetContext();
+    else 
+        makeContext();
 }
 
 void Executor::swapContext(Executor* dst, Executor* src) {
     if (swapcontext(dst->context_, src->context_)) {
         LON_LOG_FATAL(G_logger)
             << "swap context failed, executor id:" << src->id_ << ';'
-            << dst->id_ << "stack:" << backtraceString();
+            << dst->id_ << "stack:\n" << backtraceString();
     }
 }
 
@@ -179,11 +161,59 @@ void Executor::setMainExecutor(Executor::Ptr executor) {
     t_main_executor = executor;
 }
 
+void Executor::mainExec() {
+    doExec(true);
+}
+
+void Executor::mainYield() {
+    if (state_ != State::Exec)
+        return;
+    state_ = State::HoldUp;
+    mainYieldInner();
+}
+void Executor::mainExecInner() {
+    t_cur_executor = this->shared_from_this();
+    swapContext(t_base_executor.get(), this);
+}
+
+void Executor::mainYieldInner() {
+    t_cur_executor = t_base_executor;
+    swapContext(this, t_base_executor.get());
+}
+void Executor::doExec(bool main) {
+    switch (state_) {
+        case State::Init:
+            initToReady();
+            [[fallthrough]];
+        case State::HoldUp:
+        case State::Ready:
+            state_ = State::Exec;
+            if(main)
+                mainExecInner();
+            else
+                execInner();
+            break;
+        case State::Exec:
+            LON_LOG_DEBUG(G_logger)
+                << getCurrentId() << " is executing, do nothing\n";
+            break;
+        case State::Terminal:
+        case State::Aborted:
+            LON_LOG_WARN(G_logger)
+                << getCurrentId() << " has terminal or aborted, do nothing\n";
+            break;
+        default:
+            LON_LOG_ERROR(G_logger) << "state may be not init!!!";
+            break;
+    }
+}
+
 Executor::Ptr Executor::getCurrent() {
     if (t_cur_executor)
         return t_cur_executor;
     
     t_cur_executor = std::make_shared<Executor>();
+    t_base_executor = t_cur_executor;
     if(!t_main_executor) setMainExecutor(t_cur_executor);
 
     return t_cur_executor;
@@ -216,6 +246,16 @@ void Executor::getCurrentContext() {
     if (getcontext(context_)) {
         LON_LOG_ERROR(G_logger) << "get context failed" << backtraceString();
     }
+}
+
+void Executor::resetContext() {
+    bzero(stack_, stack_size_);
+    context_->uc_link          = nullptr;
+    context_->uc_stack.ss_sp   = stack_;
+    context_->uc_stack.ss_size = stack_size_;
+
+
+    makecontext(context_, &executorMainFunc, 0);
 }
 
 }  // namespace coroutine

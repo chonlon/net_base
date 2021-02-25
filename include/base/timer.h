@@ -118,9 +118,9 @@ public:
             timer = std::move(*timers_.begin());
             timers_.erase(timers_.begin());
             if (timer->repeat) {
-                timers_.insert(std::make_shared<Timer>((timer->interval,
+                timers_.insert(std::make_shared<Timer>(timer->interval,
                     timer->callback,
-                    true)));
+                    true));
             }
             if (!timer->callback) {
                 return false;

@@ -14,8 +14,8 @@ constexpr int epoll_create_size = 1000;
 constexpr int epoll_wait_max_size = 64;
 Logger::ptr G_Logger = LogManager::getInstance()->getLogger("system");
 
-IOManager::IOManager(size_t thread_count)
-    : scheduler_{thread_count} {
+IOManager::IOManager()
+    : scheduler_{} {
     scheduler_.setExitWithTasksProcessed(true);
     scheduler_.setBlockPendingFunc(std::bind(&IOManager::blockPending, this));
 
@@ -30,23 +30,17 @@ bool IOManager::registerEvent(int fd,
         return false;
     if (static_cast<size_t>(fd) > fd_events_.size()) {
         // fd_events_.resize(static_cast<size_t>(fd));
-        {
-            std::lock_guard<Mutex> lock_guard(fd_events_mutex_);
-            fd_events_.resize(static_cast<size_t>(fd * 1.5));
-        }
-        {
-            std::lock_guard<Mutex> lock_guard(read_cb_mutex_);
-            fd_read_executors_.resize(static_cast<size_t>(fd * 1.5));
-        }
-        {
-            std::lock_guard<Mutex> lock_guard(write_cb_mutex_);
-            fd_write_executors_.resize(static_cast<size_t>(fd * 1.5));
-        }
+
+        fd_events_.resize(static_cast<size_t>(fd * 1.5));
+
+        fd_read_executors_.resize(static_cast<size_t>(fd * 1.5));
+
+        fd_write_executors_.resize(static_cast<size_t>(fd * 1.5));
+
     }
 
     auto epAdd = [fd, type, this]()
     {
-        std::lock_guard<Mutex> lock_guard(fd_events_mutex_);
         uint32_t events_dst = fd_events_[fd] | type;
         if (fd_events_[fd]) {
             epollMod(fd, events_dst);
@@ -56,11 +50,11 @@ bool IOManager::registerEvent(int fd,
     };
     if (type == Read) {
         // addTo(fd_read_executors_, read_cb_mutex_);
-        std::lock_guard<Mutex> lock_guard(read_cb_mutex_);
+
         fd_read_executors_[fd] = std::move(executor);
         epAdd();
     } else if (type == Write) {
-        std::lock_guard<Mutex> lock_guard(write_cb_mutex_);
+
         fd_write_executors_[fd] = std::move(executor);
         epAdd();
     } else {
@@ -70,7 +64,7 @@ bool IOManager::registerEvent(int fd,
 }
 
 bool IOManager::hasEvent(int fd, EventType type) {
-    std::lock_guard<Mutex> lock_guard(fd_events_mutex_);
+
     if (static_cast<size_t>(fd) > fd_events_.size())
         return false;
     return fd_events_[fd] & type;
@@ -81,9 +75,9 @@ void IOManager::cancelEvent(int fd, uint32_t type) {
         return;
     }
 
-    std::lock_guard<Mutex> fd_locker(fd_events_mutex_);
+
     uint32_t events_dst = ~fd_events_[fd] & type;
-    fd_events_mutex_.unlock();
+
 
     if (events_dst) {
         epollMod(fd, events_dst);
@@ -94,12 +88,12 @@ void IOManager::cancelEvent(int fd, uint32_t type) {
         hasEvent(fd, Read)) {
         // read的callback已注册, 并且需要清除的事件有read,
         // 则将read的callback删除.
-        std::lock_guard<Mutex> lock_guard(read_cb_mutex_);
+
         fd_read_executors_[fd] = nullptr;
     }
     if (!(events_dst & Write) && hasEvent(fd, Write)) {
         // 同上read.
-        std::lock_guard<Mutex> lock_guard(write_cb_mutex_);
+
         fd_write_executors_[fd] = nullptr;
     }
 }
@@ -153,8 +147,8 @@ void IOManager::initPipe() {
 }
 
 void IOManager::wakeUpIfBlocking() {
-    if (scheduler_.getIdleThreadCount() != 0)
-        write(wakeup_pipe_fd_[1], "1", 1);
+    // if (scheduler_.getIdleThreadCount() != 0)
+    // write(wakeup_pipe_fd_[1], "1", 1);
 }
 
 void IOManager::epollAdd(int fd, uint32_t events) const {
@@ -197,12 +191,12 @@ void IOManager::blockPending() {
         } else {
             // addExecutor 必定成功.
             if (ep_event.events == EPOLLIN) {
-                std::lock_guard<Mutex> lock_guard(read_cb_mutex_);
+                fd_read_executors_[epoll_events->data.fd]->reuse();
                 bool add_ret = scheduler_.addExecutor(
                     fd_read_executors_[epoll_events->data.fd]);
                 assert(add_ret);
             } else {
-                std::lock_guard<Mutex> lock_guard(write_cb_mutex_);
+                fd_write_executors_[epoll_events->data.fd]->reuse();
                 bool add_ret = scheduler_.addExecutor(
                     fd_write_executors_[epoll_events->data.fd]);
                 assert(add_ret);

@@ -6,7 +6,7 @@
 #include <stdarg.h>
 
 bool G_hookEnabled = false;
-bool G_hookInited = false;
+bool G_hookInited  = false;
 
 void lon::io::setHookEnabled(bool enable) {
     G_hookEnabled = enable;
@@ -41,7 +41,8 @@ bool lon::io::isHookEnabled() {
     OP(setsockopt)
 
 void lon::io::hook_init() {
-    if(G_hookInited) return;
+    if (G_hookInited)
+        return;
 
 #define HOOK(name) \
     name##_sys = reinterpret_cast<name##_fun>(dlsym(RTLD_NEXT, #name));
@@ -66,56 +67,73 @@ HOOK_FUN(FUNC_INIT)
 
 // sleep
 unsigned int sleep(unsigned int seconds) {
-    if(lon::io::isHookEnabled()) return sleep_sys(seconds);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return sleep_sys(seconds);
     return lon::io::co_sleep(seconds);
 }
 
 
 int usleep(useconds_t usec) {
+    lon::io::hook_init();
     return lon::io::co_usleep(usec);
 }
 
 
 int nanosleep(const struct timespec* req, struct timespec* rem) {
-    if(lon::io::isHookEnabled()) return nanosleep_sys(req, rem);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return nanosleep_sys(req, rem);
     return lon::io::co_nanosleep(req, rem);
 }
 
 
 // socket
 int socket(int domain, int type, int protocol) {
-    if(lon::io::isHookEnabled()) return socket_sys(domain, type, protocol);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return socket_sys(domain, type, protocol);
     return lon::io::co_socket(domain, type, protocol);
 }
 
 
 int connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen) {
-    if(lon::io::isHookEnabled()) return connect_sys(sockfd, addr, addrlen);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return connect_sys(sockfd, addr, addrlen);
     return lon::io::co_connect(sockfd, addr, addrlen);
 }
 
 
 int accept(int s, struct sockaddr* addr, socklen_t* addrlen) {
-    if(lon::io::isHookEnabled()) return accept_sys(s, addr, addrlen);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return accept_sys(s, addr, addrlen);
     return lon::io::co_accept(s, addr, addrlen);
 }
 
 
 // read
 ssize_t read(int fd, void* buf, size_t count) {
-    if(lon::io::isHookEnabled()) return read(fd, buf, count);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return read_sys(fd, buf, count);
     return lon::io::co_read(fd, buf, count);
 }
 
 
 ssize_t readv(int fd, const struct iovec* iov, int iovcnt) {
-    if(lon::io::isHookEnabled()) return readv_sys(fd, iov, iovcnt);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return readv_sys(fd, iov, iovcnt);
     return lon::io::co_readv(fd, iov, iovcnt);
 }
 
 
 ssize_t recv(int sockfd, void* buf, size_t len, int flags) {
-    if(lon::io::isHookEnabled()) return recv_sys(sockfd, buf, len, flags);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return recv_sys(sockfd, buf, len, flags);
     return lon::io::co_recv(sockfd, buf, len, flags);
 }
 
@@ -126,36 +144,40 @@ ssize_t recvfrom(int sockfd,
                  int flags,
                  struct sockaddr* src_addr,
                  socklen_t* addrlen) {
-    if(lon::io::isHookEnabled()) return recvfrom_sys(sockfd, buf, len, flags, src_addr, addrlen);
-    return lon::io::co_recvfrom(sockfd,
-                                buf,
-                                len,
-                                flags,
-                                src_addr,
-                                addrlen);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return recvfrom_sys(sockfd, buf, len, flags, src_addr, addrlen);
+    return lon::io::co_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
 }
 
 
 ssize_t recvmsg(int sockfd, struct msghdr* msg, int flags) {
-    if(lon::io::isHookEnabled()) return recvmsg_sys(sockfd, msg, flags);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return recvmsg_sys(sockfd, msg, flags);
     return lon::io::co_recvmsg(sockfd, msg, flags);
 }
 
 
 // write
 ssize_t write(int fd, const void* buf, size_t count) {
-    if(lon::io::isHookEnabled()) return write_sys(fd, buf, count);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return write_sys(fd, buf, count);
     return lon::io::co_write(fd, buf, count);
 }
 
 
 ssize_t writev(int fd, const struct iovec* iov, int iovcnt) {
-    if(lon::io::isHookEnabled()) return writev_sys(fd, iov, iovcnt);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return writev_sys(fd, iov, iovcnt);
     return lon::io::co_writev(fd, iov, iovcnt);
 }
 
 
 ssize_t send(int s, const void* msg, size_t len, int flags) {
+    lon::io::hook_init();
     return lon::io::co_send(s, msg, len, flags);
 }
 
@@ -166,29 +188,31 @@ ssize_t sendto(int s,
                int flags,
                const struct sockaddr* to,
                socklen_t tolen) {
-    if(lon::io::isHookEnabled()) return sendto_sys(s, msg, len, flags, to, tolen);
-    return lon::io::co_sendto(s,
-                              msg,
-                              len,
-                              flags,
-                              to,
-                              tolen);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return sendto_sys(s, msg, len, flags, to, tolen);
+    return lon::io::co_sendto(s, msg, len, flags, to, tolen);
 }
 
 
 ssize_t sendmsg(int s, const struct msghdr* msg, int flags) {
-    if(lon::io::isHookEnabled()) return sendmsg_sys(s, msg, flags);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return sendmsg_sys(s, msg, flags);
     return lon::io::co_sendmsg(s, msg, flags);
 }
 
 
 int close(int fd) {
-    if(lon::io::isHookEnabled()) return close_sys(fd);
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return close_sys(fd);
     return lon::io::co_close(fd);
 }
 
 
 int fcntl(int fd, int cmd, ... /* arg */) {
+    lon::io::hook_init();
     int ret = 0;
     va_list args;
     va_start(args, cmd);
@@ -199,43 +223,30 @@ int fcntl(int fd, int cmd, ... /* arg */) {
 
 
 int ioctl(int d, unsigned long int request, ...) {
+    lon::io::hook_init();
     int ret = 0;
     va_list args;
     va_start(args, request);
     ret = lon::io::co_ioctl(d, request, args);
     va_end(args);
     return ret;
-    
 }
 
 
 int getsockopt(
-    int sockfd,
-    int level,
-    int optname,
-    void* optval,
-    socklen_t* optlen) {
-    if(lon::io::isHookEnabled()) return getsockopt_sys(sockfd, level, optname, optval, optlen);
-    return lon::io::co_getsockopt(
-        sockfd,
-        level,
-        optname,
-        optval,
-        optlen);
+    int sockfd, int level, int optname, void* optval, socklen_t* optlen) {
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return getsockopt_sys(sockfd, level, optname, optval, optlen);
+    return lon::io::co_getsockopt(sockfd, level, optname, optval, optlen);
 }
 
 
 int setsockopt(
-    int sockfd,
-    int level,
-    int optname,
-    const void* optval,
-    socklen_t optlen) {
-    if(lon::io::isHookEnabled()) return setsockopt_sys(sockfd, level, optname, optval, optlen);
-    return lon::io::co_setsockopt(sockfd,
-                                  level,
-                                  optname,
-                                  optval,
-                                  optlen);
+    int sockfd, int level, int optname, const void* optval, socklen_t optlen) {
+    lon::io::hook_init();
+    if (!lon::io::isHookEnabled())
+        return setsockopt_sys(sockfd, level, optname, optval, optlen);
+    return lon::io::co_setsockopt(sockfd, level, optname, optval, optlen);
 }
 }

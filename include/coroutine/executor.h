@@ -30,6 +30,8 @@ void callerExecutorFunc();
  */
 class Executor : public std::enable_shared_from_this<Executor>
 {
+    friend class Scheduler;
+
 public:
     using ExectutorFunc = std::function<void()>;
     using Ptr           = std::shared_ptr<Executor>;
@@ -41,14 +43,14 @@ public:
         Init,
         Exec,
         Ready,
-        HoldUp,//挂起, 空闲时被唤醒.
+        HoldUp,  //挂起, 空闲时被唤醒.
         Terminal,
         Aborted  // 异常终止
     };
 
     /**
      * @brief Construct a new Executor object by current context.
-     * 
+     *
      */
     Executor()
         : state_{State::Ready},
@@ -62,12 +64,13 @@ public:
 
     /**
      * @brief Construct a new Executor object by callback.
-     * 
+     *
      * @param _stack_size running stack size.
      * @param _callback  running callback, not null.
      */
     Executor(ExectutorFunc _callback, size_t _stack_size = DefaultStackSize)
-        : state_{State::Init},
+        : is_call_back_type_{true},
+          state_{State::Init},
           id_{executor_info::idGenerate()},
           stack_size_{_stack_size},
           stack_{nullptr},
@@ -77,7 +80,7 @@ public:
     }
 
 
-    Executor(const Executor& _other) = delete;
+    Executor(const Executor& _other)     = delete;
     Executor(Executor&& _other) noexcept = delete;
     auto operator=(const Executor& _other) -> Executor& = delete;
     auto operator=(Executor&& _other) noexcept -> Executor& = delete;
@@ -99,11 +102,11 @@ public:
     // any --> terminal
     void kill();
 
-    
+
     LON_NODISCARD auto getState() const -> State {
         return state_;
     }
-    
+
     LON_NODISCARD auto getId() const -> uint64_t {
         return id_;
     }
@@ -114,6 +117,14 @@ public:
     }
 
     void reset(ExectutorFunc func, bool back_to_caller);
+
+    bool isCallbackType() {return is_call_back_type_;}
+    void reuse() {
+        if(is_call_back_type_ && state_ == State::Terminal) {
+            state_ = State::Ready;
+            resetContext();
+        }
+    }
 
     /**
      * @brief get current executor in this thread.
@@ -127,7 +138,14 @@ public:
     static void setMainExecutor(Executor::Ptr executor);
 
 private:
+    void mainExec();
+    void mainYield();
+    void mainExecInner();
+    void mainYieldInner();
+
     void terminal();
+
+    void doExec(bool main);
 
     // two executor in same thread.
     static void swapContext(Executor* dst, Executor* src);
@@ -147,14 +165,18 @@ private:
 
     void getCurrentContext();
 
+    void resetContext();
+
 private:
+    bool is_call_back_type_ = false;
     State state_;
     size_t id_;
     size_t stack_size_;
     void* stack_;  // 执行单元的栈.
     ExectutorFunc callback_;
-    //ucontext 的size大约是1KB, 使用指针而不是直接作为成员, 这样的话处于init状态的executor可以很大程度上减少内存消耗.
-    ucontext_t* context_{nullptr}; 
+    // ucontext 的size大约是1KB, 使用指针而不是直接作为成员,
+    // 这样的话处于init状态的executor可以很大程度上减少内存消耗.
+    ucontext_t* context_{nullptr};
 };
 
 

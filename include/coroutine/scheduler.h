@@ -12,32 +12,21 @@
 
 namespace lon::coroutine {
 
-const size_t default_thread_count = std::thread::hardware_concurrency() - 1;
 
+/**
+ * @brief 1Thread-->1Scheduler-->N Executor.
+*/
 class Scheduler : public Noncopyable
 {
 public:
+    
     using BlockFuncType = std::function<void()>;
     using StopFuncType = std::function<bool()>;
 
-    Scheduler(size_t thread_count = default_thread_count)
-        : threads_count_{thread_count ? thread_count : default_thread_count} {
-        block_pending_func_ = []()
-        {
-            // 默认阻塞0.01s
-            using namespace std::chrono_literals;
-            std::this_thread::sleep_for(10ms);
-        };
-        stop_pending_func_ = []() { return false; };
-        executors_.resize(thread_count + 1);
-    }
+    Scheduler();
 
 
-    ~Scheduler() {
-        for (auto& thread : exec_threads_) {
-            thread.join();
-        }
-    }
+    ~Scheduler();
 
     /**
      * @brief 添加executor到指定线程执行
@@ -51,22 +40,15 @@ public:
 
 
     void run() {
-        for (size_t i = 1; i <= threads_count_; ++i) {
-            exec_threads_.emplace_back(
-                std::bind(&Scheduler::threadScheduleFunc, this, i));
-        }
+        scheduler_executor_->mainExec();
     }
 
     void stop() {
         if(exit_with_tasks_processed) {
             stopping_ = true;
         } else {
-            // std::lock_guard<Mutex> locker(executors_mutex_);
-            // executors_.clear();
             stopped_ = true;
         }
-
-        
     }
 
 
@@ -95,37 +77,30 @@ public:
         exit_with_tasks_processed = _exit_with_tasks_processed;
     }
 
-    LON_NODISCARD auto getThreadsCount() const -> size_t {
-        return threads_count_;
-    }
-
-    LON_NODISCARD auto getIdleThreadCount() const -> size_t {
-        return idle_thread_count_;
-    }
 
     LON_NODISCARD auto getExecutorsCount() const -> size_t {
-        return executors_count_;
+        return executors_.size();
     }
 
+
+    static Scheduler* getThreadLocal();
 private:
-    void threadScheduleFunc(size_t index);
+    void threadScheduleFunc();
 
     bool stop_pending() {
         return stopped_ && stop_pending_func_();
     }
 
 private:
-    std::atomic_bool stopping_{false};
-    std::atomic_bool stopped_{false};
+    bool stopping_{false};
+    bool stopped_{false};
     bool exit_with_tasks_processed{true};
-    Mutex executors_mutex_{};
+    
     BlockFuncType block_pending_func_{nullptr};
     StopFuncType stop_pending_func_{nullptr};
-    std::vector<Thread> exec_threads_{};
-    std::vector<std::list<Executor::Ptr>> executors_{};
-    size_t threads_count_;
-    std::atomic<size_t> idle_thread_count_ = 0;
-    std::atomic<size_t> executors_count_   = 0;
+    
+    std::list<Executor::Ptr> executors_{};
+    Executor::Ptr scheduler_executor_ = nullptr;
 };
 
 
