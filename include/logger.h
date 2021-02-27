@@ -80,6 +80,7 @@ struct LogEvent
     LogEvent(LogEvent&& _other) noexcept = default;
     auto operator=(const LogEvent& _other) -> LogEvent& = default;
     auto operator=(LogEvent&& _other) noexcept -> LogEvent& = default;
+    ~LogEvent() = default;
 
     LogEvent(const char* _file_name,
              int _line,

@@ -25,6 +25,12 @@ struct FdContext
 class _FdManager
 {
 public:
+    _FdManager() : context_{nullptr}, len_{0} {
+        constexpr int default_size = 10;
+        context_ = new FdContext[default_size];
+        len_ = default_size;
+    }
+
     void setContext(int fd, FdContext context) {
         WriteLocker<RWMutex> lock(mutex_);
         if (fd >= len_)
@@ -128,7 +134,7 @@ private:
     }
 
     FdContext* context_;
-    int len_ = 1;
+    int len_;
     mutable RWMutex mutex_;
 };
 

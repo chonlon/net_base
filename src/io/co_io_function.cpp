@@ -44,14 +44,15 @@ ssize_t ioInner(int fd,
                 n_bytes = func(fd, std::forward<Args>(args)...);
             }
             if (n_bytes == -1 && errno == EAGAIN) {  // exec failed.
-                std::weak_ptr<bool> time_out_weak_ptr =
-                    std::make_shared<bool>(false);
+                auto time_out_ptr = std::make_shared<bool>(false);
+                std::weak_ptr<bool> time_out_weak_ptr = time_out_ptr;
+                    
                 Timer::Ptr timer = std::make_shared<Timer>(
                     time_out_ms,
                     [io_manager, fd, event_type, time_out_weak_ptr]() {
                         auto is_time_out = time_out_weak_ptr.lock();
                         if (is_time_out && !*is_time_out) {
-                            io_manager->cancelEvent(fd, event_type);
+                            io_manager->removeEvent(fd, event_type);
                             *is_time_out = true;
                         }
                     });
@@ -59,8 +60,7 @@ ssize_t ioInner(int fd,
                 io_manager->registerEvent(
                     fd, event_type, coroutine::Executor::getCurrent());
                 coroutine::Executor::getCurrent()->yield();
-                auto is_time_out = time_out_weak_ptr.lock();
-                if (*is_time_out) {
+                if (*time_out_ptr) {
                     return -1;
                 } else {
                     io_manager->cancelTimer(timer);
@@ -111,14 +111,54 @@ int co_socket(int domain, int type, int protocol) {
 
 int co_connect(int sockfd, const sockaddr* addr, socklen_t addrlen) {
     hook_init();
-    // ioInner(sockfd, )
-    return 0;
+    auto context = FdManager::getInstance()->getContext(sockfd);
+    if(!context) {
+        errno = EBADF;
+        return -1;
+    }
+
+     if(!context->is_socket || context->is_user_non_block) {
+         return connect_sys(sockfd, addr, addrlen);
+     }
+
+    {
+        int ret = connect_sys(sockfd, addr, addrlen);
+        if(ret != -1 || errno != EINPROGRESS) {
+            return ret;
+        }
+    }
+    // 下面意味着sockfd是非阻塞的, 并且没有成功连接, 那么协程主动让出执行权限(直到epoll触发).
+    auto io_manager = IOManager::getThreadLocal();
+    io_manager->registerEvent(sockfd, IOManager::Write, coroutine::Executor::getCurrent());
+    coroutine::Executor::getCurrent()->yield();
+
+    //yield返回的时候, 说明connect执行完成(失败).
+    int error = 0;
+    socklen_t len = sizeof(int);
+    if(-1 == getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len)) {
+        return -1;
+    }
+    if(!error) {
+        return 0;
+    } else {
+        errno = error;
+        return -1;
+    }
 }
 
 int co_accept(int s, sockaddr* addr, socklen_t* addrlen) {
     hook_init();
-    return static_cast<int>(
-        ioInner(s, IOManager::Read, accept_sys, addr, addrlen));
+    int fd = static_cast<int>(ioInner(s, IOManager::Read, accept_sys, addr, addrlen));
+    if(fd >= 0) {
+        int flags = fcntl_sys(fd, F_GETFL, 0);
+        if (!(flags & O_NONBLOCK)) {
+            fcntl_sys(fd, F_SETFL, flags | O_NONBLOCK);
+        }
+        FdContext context(true);
+        context.is_sys_non_block = true;
+        FdManager::getInstance()->setContext(fd, context);
+    }
+    return fd;
 }
 
 ssize_t co_read(int fd, void* buf, size_t count) {
@@ -191,7 +231,7 @@ ssize_t co_sendmsg(int s, const msghdr* msg, int flags) {
 int co_close(int fd) {
     hook_init();
     if (FdManager::getInstance()->hasFd(fd)) {
-        IOManager::getThreadLocal()->cancelEvent(
+        IOManager::getThreadLocal()->removeEvent(
             fd, IOManager::Read | IOManager::Write);
         FdManager::getInstance()->delContext(fd);
     }

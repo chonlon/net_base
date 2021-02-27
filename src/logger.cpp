@@ -179,7 +179,7 @@ namespace detail {
 //     // LogManager::getInstance()->default_logger_ = ptr;
 //     // LogManager::getInstance()->loggers_.insert({"root", ptr});
 //     // LogFactory::default_logger_ = ptr;
-//     //
+//     //P
 //     // LogFactory::loggers_.insert({ "root", ptr });
 // }
 

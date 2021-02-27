@@ -10,12 +10,11 @@
 namespace lon::io {
 thread_local std::unique_ptr<IOManager> t_io_manager = nullptr;
 
-constexpr int epoll_create_size = 1000;
+constexpr int epoll_create_size   = 1000;
 constexpr int epoll_wait_max_size = 64;
 Logger::ptr G_Logger = LogManager::getInstance()->getLogger("system");
 
-IOManager::IOManager()
-    : scheduler_{} {
+IOManager::IOManager() : scheduler_{} {
     scheduler_.setExitWithTasksProcessed(true);
     scheduler_.setBlockPendingFunc(std::bind(&IOManager::blockPending, this));
 
@@ -25,37 +24,36 @@ IOManager::IOManager()
 
 bool IOManager::registerEvent(int fd,
                               EventType type,
-                              coroutine::Executor::Ptr executor) {
+                              coroutine::Executor::Ptr executor,
+                              bool call_once) {
     if (stopped)
         return false;
-    if (static_cast<size_t>(fd) > fd_events_.size()) {
+    if (static_cast<size_t>(fd) >= fd_events_.size()) {
         // fd_events_.resize(static_cast<size_t>(fd));
 
         fd_events_.resize(static_cast<size_t>(fd * 1.5));
-
-        fd_read_executors_.resize(static_cast<size_t>(fd * 1.5));
-
-        fd_write_executors_.resize(static_cast<size_t>(fd * 1.5));
-
     }
 
-    auto epAdd = [fd, type, this]()
-    {
-        uint32_t events_dst = fd_events_[fd] | type;
-        if (fd_events_[fd]) {
+    auto epAdd = [fd, type, this]() {
+        uint32_t events_dst = fd_events_[fd].registered_events | type;
+        if (fd_events_[fd].registered_events) {
             epollMod(fd, events_dst);
         } else {
             epollAdd(fd, events_dst | EPOLLET);
         }
+        fd_events_[fd].registered_events = events_dst;
     };
+
     if (type == Read) {
         // addTo(fd_read_executors_, read_cb_mutex_);
 
-        fd_read_executors_[fd] = std::move(executor);
+        fd_events_[fd].read_executor  = std::move(executor);
+        fd_events_[fd].read_call_once = call_once;
         epAdd();
     } else if (type == Write) {
 
-        fd_write_executors_[fd] = std::move(executor);
+        fd_events_[fd].write_executor  = std::move(executor);
+        fd_events_[fd].write_call_once = call_once;
         epAdd();
     } else {
         return false;
@@ -65,18 +63,16 @@ bool IOManager::registerEvent(int fd,
 
 bool IOManager::hasEvent(int fd, EventType type) {
 
-    if (static_cast<size_t>(fd) > fd_events_.size())
+    if (static_cast<size_t>(fd) >= fd_events_.size())
         return false;
-    return fd_events_[fd] & type;
+    return fd_events_[fd].registered_events & type;
 }
 
-void IOManager::cancelEvent(int fd, uint32_t type) {
-    if (static_cast<size_t>(fd) > fd_events_.size()) {
+void IOManager::removeEvent(int fd, uint32_t events) {
+    if (static_cast<size_t>(fd) >= fd_events_.size() || !(fd_events_[fd].registered_events & events)) {
         return;
     }
-
-
-    uint32_t events_dst = ~fd_events_[fd] & type;
+    const uint32_t events_dst = ~fd_events_[fd].registered_events & events;
 
 
     if (events_dst) {
@@ -84,17 +80,11 @@ void IOManager::cancelEvent(int fd, uint32_t type) {
     } else {
         epollDel(fd);
     }
-    if (!(events_dst & Read) &&
-        hasEvent(fd, Read)) {
-        // read的callback已注册, 并且需要清除的事件有read,
-        // 则将read的callback删除.
-
-        fd_read_executors_[fd] = nullptr;
+    if (!(events_dst & Read)) {
+        fd_events_[fd].read_executor = nullptr;
     }
-    if (!(events_dst & Write) && hasEvent(fd, Write)) {
-        // 同上read.
-
-        fd_write_executors_[fd] = nullptr;
+    if (!(events_dst & Write)) {
+        fd_events_[fd].write_executor = nullptr;
     }
 }
 
@@ -126,12 +116,12 @@ IOManager* IOManager::getThreadLocal() {
     return t_io_manager.get();
 }
 
+
 void IOManager::initEpoll() {
     epoll_fd_ = epoll_create(epoll_create_size);
     if (epoll_fd_ == -1) {
         LON_LOG_ERROR(G_Logger) << fmt::format(
-            "epoll create failed, with error: {}",
-            std::strerror(errno));
+            "epoll create failed, with error: {}", std::strerror(errno));
         assert(false);
     }
 }
@@ -167,41 +157,83 @@ void IOManager::epollDel(int fd) const {
 }
 
 void IOManager::blockPending() {
-    int next_interval = static_cast<int>(timer_manager_.getNextInterval());
-    if (next_interval == 0) {
-        // std::cout << "--interval stopping!";
-        next_interval = -1;
-    }
+    int ret = 0;
     struct epoll_event epoll_events[epoll_wait_max_size];
-    int ret =
-        epoll_wait(epoll_fd_, epoll_events, epoll_wait_max_size, next_interval);
 
-    Timer::Ptr exec_timer     = std::make_shared<Timer>(0);
-    Timer::MsStampType cur_ms = currentMs();
-    while (timer_manager_.getFirstIfExpired(exec_timer, cur_ms)) {
-        // exec_timer.callback();
-        scheduler_.addExecutor(std::make_shared<coroutine::Executor>(
-            std::move(exec_timer->callback)));
+    {
+        const int next_interval = static_cast<int>(timer_manager_.getNextInterval());
+        ret = epoll_wait(epoll_fd_, epoll_events, epoll_wait_max_size, next_interval);
     }
+
+
+    {// 执行定时任务.
+        auto timers = timer_manager_.getExpiredTimers();
+        for(auto& timer : timers) {
+            scheduler_.addExecutor(std::make_shared<coroutine::Executor>(
+                std::move(timer->callback)));
+        }
+    }
+
 
     for (int i = 0; i < ret; ++i) {
-        auto ep_event = epoll_events[i];
+        const epoll_event ep_event = epoll_events[i];
         if (ep_event.data.fd == wakeup_pipe_fd_[0]) {
             continue;
         } else {
+
+            {// 删除事件.
+                uint32_t left_events = fd_events_[ep_event.data.fd].registered_events;
+
+                if (ep_event.events & EPOLLIN) {
+                    if (fd_events_[epoll_events->data.fd].read_call_once) {
+                        left_events &= ~EPOLLIN;
+                    }
+                    else {
+                        fd_events_[epoll_events->data.fd].read_executor->reuse();
+                    }
+                }
+                if (ep_event.events & EPOLLOUT) {
+                    if (fd_events_[epoll_events->data.fd].write_call_once) {
+                        left_events &= ~EPOLLOUT;
+                    }
+                    else {
+                        fd_events_[epoll_events->data.fd].write_executor->reuse();
+                    }
+                }
+
+                if(left_events != fd_events_[ep_event.data.fd].registered_events) {
+                    if (left_events) {
+                        epollMod(ep_event.data.fd, left_events);
+                    }
+                    else {
+                        epollDel(ep_event.data.fd);
+                    }
+                    fd_events_[ep_event.data.fd].registered_events = left_events;
+                }
+                
+            }
+
+            // 执行.
             // addExecutor 必定成功.
-            if (ep_event.events == EPOLLIN) {
-                fd_read_executors_[epoll_events->data.fd]->reuse();
+            if (ep_event.events & EPOLLIN) {
                 bool add_ret = scheduler_.addExecutor(
-                    fd_read_executors_[epoll_events->data.fd]);
+                    fd_events_[ep_event.data.fd].read_executor);
+
+                if (fd_events_[ep_event.data.fd].read_call_once) {
+                    fd_events_[ep_event.data.fd].read_executor = nullptr;
+                }
                 assert(add_ret);
-            } else {
-                fd_write_executors_[epoll_events->data.fd]->reuse();
+            }
+            if (ep_event.events & EPOLLOUT) {
                 bool add_ret = scheduler_.addExecutor(
-                    fd_write_executors_[epoll_events->data.fd]);
+                    fd_events_[ep_event.data.fd].write_executor);
+
+                if (fd_events_[ep_event.data.fd].write_call_once) {
+                    fd_events_[ep_event.data.fd].write_executor = nullptr;
+                }
                 assert(add_ret);
             }
         }
     }
 }
-} // namespace lon::io
+}  // namespace lon::io

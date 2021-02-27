@@ -13,8 +13,8 @@ namespace lon {
 struct Timer
 {
     using CallbackType = std::function<void()>;
-    using MsStampType = size_t;
-    using Ptr = std::shared_ptr<Timer>;
+    using MsStampType  = size_t;
+    using Ptr          = std::shared_ptr<Timer>;
 
     struct Comparator
     {
@@ -25,25 +25,26 @@ struct Timer
     };
 
 
-    Timer(const Timer& _other)                        = default;
-    Timer(Timer&& _other) noexcept                    = default;
-    auto operator=(const Timer& _other) -> Timer&     = default;
+    Timer(const Timer& _other)     = default;
+    Timer(Timer&& _other) noexcept = default;
+    auto operator=(const Timer& _other) -> Timer& = default;
     auto operator=(Timer&& _other) noexcept -> Timer& = default;
     ~Timer()                                          = default;
 
     Timer(MsStampType _interval, CallbackType _callback, bool _repeat = false)
-        : repeat{_repeat},
-          target_timestamp{_interval + currentMs()},
-          interval{_interval},
-          callback{std::move(_callback)} {
+        : repeat{_repeat}, interval{_interval}, callback{std::move(_callback)} {
+        auto cur_ms = currentMs();
+        if (interval > static_cast<MsStampType>(-1) - cur_ms)
+            target_timestamp = static_cast<MsStampType>(-1);
+        else
+            target_timestamp = interval + cur_ms;
     }
 
     Timer(MsStampType _target_timestamp)
-        : target_timestamp{_target_timestamp} {
-    }
+        : target_timestamp{_target_timestamp} {}
 
     bool repeat                  = false;
-    MsStampType target_timestamp = 0;
+    MsStampType target_timestamp = static_cast<MsStampType>(-1);
     MsStampType interval         = 0;
     CallbackType callback        = nullptr;
 };
@@ -57,7 +58,7 @@ public:
     /**
      * @brief add timer to manager, timer callback not null required.
      * @param timer timer shared ptr, not null required.
-    */
+     */
     void addTimer(Timer::Ptr timer) {
         assert(timer);
         assert(timer->callback != nullptr);
@@ -77,17 +78,16 @@ public:
         {
             std::lock_guard<Mutex> locker(timer_mutex_);
             auto iter = timers_.lower_bound(current_timer);
-            while (iter != timers_.end() && (*iter)->target_timestamp == cur_ms
-            ) {
+            while (iter != timers_.end() &&
+                   (*iter)->target_timestamp == cur_ms) {
                 ++iter;
             }
             std::move(timers_.begin(), iter, std::back_inserter(result));
-
+            timers_.erase(timers_.begin(), iter);
             for (auto& timer : result) {
                 if (timer->repeat) {
-                    timers_.insert(std::make_shared<Timer>(timer->interval,
-                        timer->callback,
-                        true));
+                    timers_.insert(std::make_shared<Timer>(
+                        timer->interval, timer->callback, true));
                 }
             }
         }
@@ -98,7 +98,10 @@ public:
     Timer::MsStampType getNextInterval() const {
         std::lock_guard<Mutex> locker(timer_mutex_);
         if (timers_.empty())
+            return static_cast<Timer::MsStampType>(-1);
+        if((*timers_.begin())->target_timestamp < currentMs()) {
             return 0;
+        }
         return (*timers_.begin())->target_timestamp - currentMs();
     }
 
@@ -118,9 +121,8 @@ public:
             timer = std::move(*timers_.begin());
             timers_.erase(timers_.begin());
             if (timer->repeat) {
-                timers_.insert(std::make_shared<Timer>(timer->interval,
-                    timer->callback,
-                    true));
+                timers_.insert(std::make_shared<Timer>(
+                    timer->interval, timer->callback, true));
             }
             if (!timer->callback) {
                 return false;
@@ -132,7 +134,8 @@ public:
     }
 
     void removeTimer(Timer::Ptr timer) {
-        if(!timer) return;
+        if (!timer)
+            return;
         std::lock_guard<Mutex> locker(timer_mutex_);
         auto iter = timers_.find(timer);
         timers_.erase(iter);
@@ -142,4 +145,4 @@ private:
     mutable Mutex timer_mutex_;
     std::multiset<Timer::Ptr, Timer::Comparator> timers_;
 };
-} // namespace lon
+}  // namespace lon

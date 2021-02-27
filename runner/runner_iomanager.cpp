@@ -46,8 +46,8 @@ void runEventServer() {
             } else {
                 fmt::print("read: {}\n", buf);
             }
-        }));
-    }));
+        }), false);
+    }), false);
 }
 
 void runEventClient() {

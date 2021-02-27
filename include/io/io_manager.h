@@ -30,12 +30,13 @@ public:
      * @param fd io的fd
      * @param type 读写类型
      * @param executor 事件对应的执行协程.
+     * @param call_once if true, 注册事件协程执行一次即结束, if false, 注册事件协程像回调一样会在每次事件触发时执行.
      * @exception bad_alloc from vector resize
      * @return 是否注册成功, 如果IOManager已经stop或者type错误, 注册会失败.
     */
-    bool registerEvent(int fd, EventType type, coroutine::Executor::Ptr executor);
+    bool registerEvent(int fd, EventType type, coroutine::Executor::Ptr executor, bool call_once = true);
     bool hasEvent(int fd, EventType type);
-    void cancelEvent(int fd, uint32_t types);
+    void removeEvent(int fd, uint32_t events);
 
     void addExecutor(coroutine::Executor::Ptr executor) {
         scheduler_.addExecutor(executor);
@@ -70,6 +71,16 @@ public:
     */
     static IOManager* getThreadLocal();
 private:
+    struct FdEvents
+    {
+        uint32_t registered_events = 0;//fd 已注册事件类型
+        bool read_call_once = true;
+        bool write_call_once = true;
+        coroutine::Executor::Ptr read_executor = nullptr;//fd对应的读事件执行器
+        coroutine::Executor::Ptr write_executor = nullptr;//fd对应的写事件执行器
+    };
+
+
     void initEpoll();
     void initPipe();
 
@@ -90,9 +101,7 @@ private:
     int wakeup_pipe_fd_[2]{-1,-1};
     coroutine::Scheduler scheduler_;
     TimerManager timer_manager_;
-    std::vector<coroutine::Executor::Ptr> fd_read_executors_;//fd对应的读事件执行器
-    std::vector<coroutine::Executor::Ptr> fd_write_executors_;//fd对应的写事件执行器
-    std::vector<uint32_t> fd_events_;//fd 已注册事件类型
+    std::vector<FdEvents> fd_events_;
 };
 
 
