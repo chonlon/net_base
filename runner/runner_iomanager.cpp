@@ -92,7 +92,6 @@ int main() {
 
     runEventServer();
     runTimer(1000);
-    // LON_ERROR_INVOKE_ASSERT(false, "test", G_Logger);
 
     io_manager->run();
     io_manager->stop();

@@ -21,8 +21,8 @@
 #define LON_HAVE_O_CLOEXEC 1
 
 
-#define LON_ERROR_INVOKE_ASSERT(condition, func_name, logger) \
+#define LON_ERROR_INVOKE_ASSERT(condition, func_name, info, logger) \
     	if (!(condition)) { \
-            LON_LOG_ERROR(logger) << fmt::format(#func_name " failed, with error: {}", std::strerror(errno)); \
+            LON_LOG_ERROR(logger) << fmt::format(#func_name " failed, with error: {} {}", std::strerror(errno), info); \
             assert(false); \
         }
