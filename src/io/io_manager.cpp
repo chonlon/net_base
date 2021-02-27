@@ -19,7 +19,6 @@ IOManager::IOManager() : scheduler_{} {
     scheduler_.setBlockPendingFunc(std::bind(&IOManager::blockPending, this));
 
     initEpoll();
-    initPipe();
 }
 
 bool IOManager::registerEvent(int fd,
@@ -126,15 +125,6 @@ void IOManager::initEpoll() {
     }
 }
 
-void IOManager::initPipe() {
-    int ret = pipe(wakeup_pipe_fd_);
-    LON_ERROR_INVOKE_ASSERT(ret != -1, "pipe open", "",G_Logger);
-
-    ret = fcntl(wakeup_pipe_fd_[0], F_SETFL, O_NONBLOCK);
-    LON_ERROR_INVOKE_ASSERT(ret != -1, "fcntl", "cmd: F_SETFL, op: O_NONBLOCK", G_Logger);
-
-    epollAdd(wakeup_pipe_fd_[0], EPOLLIN | EPOLLOUT);
-}
 
 void IOManager::wakeUpIfBlocking() {
     // if (scheduler_.getIdleThreadCount() != 0)
@@ -178,10 +168,7 @@ void IOManager::blockPending() {
 
     for (int i = 0; i < ret; ++i) {
         const epoll_event ep_event = epoll_events[i];
-        if (ep_event.data.fd == wakeup_pipe_fd_[0]) {
-            continue;
-        } else {
-
+        {
             {// 删除事件.
                 uint32_t left_events = fd_events_[ep_event.data.fd].registered_events;
 

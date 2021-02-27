@@ -82,7 +82,6 @@ private:
 
 
     void initEpoll();
-    void initPipe();
 
     // wake up from epoll_wait if blocking.
     void wakeUpIfBlocking();
@@ -98,7 +97,6 @@ private:
 
     bool stopped{false};
     int epoll_fd_{ -1 };
-    int wakeup_pipe_fd_[2]{-1,-1};
     coroutine::Scheduler scheduler_;
     TimerManager timer_manager_;
     std::vector<FdEvents> fd_events_;
