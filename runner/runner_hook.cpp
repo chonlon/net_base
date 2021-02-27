@@ -72,7 +72,6 @@ void run_server() {
                 fmt::print("message coming\n");
                 nread = read(accept_fd, buf , 1024);
                 if (nread == 0) {
-                    // shutdown write.
                     fmt::print("remote closed\n");
                     break;
                 } else if (nread == -1 && errno != EAGAIN) {

@@ -31,6 +31,10 @@ public:
         len_ = default_size;
     }
 
+    ~_FdManager() {
+        delete[] context_;
+    }
+
     void setContext(int fd, FdContext context) {
         WriteLocker<RWMutex> lock(mutex_);
         if (fd >= len_)
@@ -64,63 +68,6 @@ public:
         }
     }
 
-    // bool setIsSocket (int fd, bool value) {
-    // 	WriteLocker<RWMutex> wlocker(mutex_);
-    // 	if(fd > len_) return false;
-    // 	context_[fd].is_socket = value;
-    // 	return true;
-    // }
-    // bool setIsInitialized (int fd, bool value) {
-    // 	WriteLocker<RWMutex> wlocker(mutex_);
-    // 	if(fd > len_) return false;
-    // 	context_[fd].is_initialized = value;
-    // 	return true;
-    // }
-    // bool setIsClosed (int fd, bool value) {
-    // 	WriteLocker<RWMutex> wlocker(mutex_);
-    // 	if(fd > len_) return false;
-    // 	context_[fd].is_closed = value;
-    // 	return true;
-    // }
-    // bool setIsUserNonBlock (int fd, bool value) {
-    // 	WriteLocker<RWMutex> wlocker(mutex_);
-    // 	if(fd > len_) return false;
-    // 	context_[fd].is_user_non_block = value;
-    // 	return true;
-    // }
-    // bool setIsSysNonBlock (int fd, bool value) {
-    // 	WriteLocker<RWMutex> wlocker(mutex_);
-    // 	if(fd > len_) return false;
-    // 	context_[fd].is_sys_non_block = value;
-    // 	return true;
-    // }
-    //
-    // std::pair<bool, bool> getIssocket(int fd) {
-    // 	ReadLocker<RWMutex> locker(mutex_);
-    // 	if(fd > len_) return {false, false};
-    // 	return {context_[fd].is_socket, true};
-    // }
-    // std::pair<bool, bool> getIsinitialized(int fd) {
-    // 	ReadLocker<RWMutex> locker(mutex_);
-    // 	if(fd > len_) return {false, false};
-    // 	return {context_[fd].is_initialized, true};
-    // }
-    // std::pair<bool, bool> getIsclosed(int fd) {
-    // 	ReadLocker<RWMutex> locker(mutex_);
-    // 	if(fd > len_) return {false, false};
-    // 	return {context_[fd].is_closed, true};
-    // }
-    // std::pair<bool, bool> getIsUserNonBlock(int fd) {
-    // 	ReadLocker<RWMutex> locker(mutex_);
-    // 	if(fd > len_) return {false, false};
-    // 	return {context_[fd].is_user_non_block, true};
-    // }
-    // std::pair<bool, bool> getIsSysNonBlock(int fd) {
-    // 	ReadLocker<RWMutex> locker(mutex_);
-    // 	if(fd > len_) return {false, false};
-    // 	return {context_[fd].is_sys_non_block, true};
-    // }
-
 private:
     void allocToNewSize() {
         constexpr double factor = 1.5;
@@ -128,7 +75,7 @@ private:
         FdContext* dst = new FdContext[static_cast<int>(len_ * factor)]; 
         std::memcpy(dst, context_, len_ * sizeof(FdContext));
         // free(context_);
-        delete dst;
+        delete[] dst;
         context_ = dst;
         len_     = static_cast<int>(len_ * factor);
     }

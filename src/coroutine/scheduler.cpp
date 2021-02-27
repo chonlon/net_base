@@ -22,6 +22,7 @@ Scheduler::Scheduler() {
 }
 
 Scheduler::~Scheduler() {
+    stop();
     std::cout << "Scheduler destruct in thread " << lon::getThreadIdRaw();
 }
 
