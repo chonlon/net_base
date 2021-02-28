@@ -72,9 +72,8 @@ private:
     void allocToNewSize() {
         constexpr double factor = 1.5;
 
-        FdContext* dst = new FdContext[static_cast<int>(len_ * factor)]; 
+        FdContext* dst = new FdContext[static_cast<int>(len_ * factor)];
         std::memcpy(dst, context_, len_ * sizeof(FdContext));
-        // free(context_);
         delete[] dst;
         context_ = dst;
         len_     = static_cast<int>(len_ * factor);

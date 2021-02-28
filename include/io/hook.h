@@ -1,5 +1,9 @@
 #pragma once
 
+/**
+ * 所有被hook的io api(X)更改为加_sys后缀(X_sys).
+ */
+
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>

@@ -6,16 +6,16 @@
 #include "io/io_manager.h"
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <typeinfo>
 
 namespace lon::io {
+static Logger::ptr G_Logger = LogManager::getInstance()->getLogger("system");
 
 void sleepInner(unsigned ms) {
     auto current    = coroutine::Executor::getCurrent();
     auto io_manager = IOManager::getThreadLocal();
     io_manager->registerTimer(std::make_shared<Timer>(
-        ms, [io_manager, current]() {
-            io_manager->addExecutor(current); 
-    }));
+        ms, [io_manager, current]() { io_manager->addExecutor(current); }));
     current->yield();
 }
 
@@ -38,15 +38,17 @@ ssize_t ioInner(int fd,
             time_out_ms = context->writeTimeout;
         }
         ssize_t n_bytes = -1;
-        while (true) {  // try to exec func.
+        while (true) {
+            // try to exec func.
             n_bytes = func(fd, std::forward<Args>(args)...);
             while (n_bytes == -1 && errno == EINTR) {
                 n_bytes = func(fd, std::forward<Args>(args)...);
             }
-            if (n_bytes == -1 && errno == EAGAIN) {  // exec failed.
+            if (n_bytes == -1 && errno == EAGAIN) {
+                // exec failed.
                 auto time_out_ptr = std::make_shared<bool>(false);
                 std::weak_ptr<bool> time_out_weak_ptr = time_out_ptr;
-                    
+
                 Timer::Ptr timer = std::make_shared<Timer>(
                     time_out_ms,
                     [io_manager, fd, event_type, time_out_weak_ptr]() {
@@ -61,6 +63,10 @@ ssize_t ioInner(int fd,
                     fd, event_type, coroutine::Executor::getCurrent());
                 coroutine::Executor::getCurrent()->yield();
                 if (*time_out_ptr) {
+                    LON_LOG_WARN(G_Logger)
+                        << fmt::format("{} invoke timeout with fd:{}",
+                                       typeid(func).name(),
+                                       fd);
                     return -1;
                 } else {
                     io_manager->cancelTimer(timer);
@@ -112,33 +118,35 @@ int co_socket(int domain, int type, int protocol) {
 int co_connect(int sockfd, const sockaddr* addr, socklen_t addrlen) {
     hook_init();
     auto context = FdManager::getInstance()->getContext(sockfd);
-    if(!context) {
+    if (!context) {
         errno = EBADF;
         return -1;
     }
 
-     if(!context->is_socket || context->is_user_non_block) {
-         return connect_sys(sockfd, addr, addrlen);
-     }
+    if (!context->is_socket || context->is_user_non_block) {
+        return connect_sys(sockfd, addr, addrlen);
+    }
 
     {
         int ret = connect_sys(sockfd, addr, addrlen);
-        if(ret != -1 || errno != EINPROGRESS) {
+        if (ret != -1 || errno != EINPROGRESS) {
             return ret;
         }
     }
-    // 下面意味着sockfd是非阻塞的, 并且没有成功连接, 那么协程主动让出执行权限(直到epoll触发).
+    // 下面意味着sockfd是非阻塞的, 并且没有成功连接,
+    // 那么协程主动让出执行权限(直到epoll触发).
     auto io_manager = IOManager::getThreadLocal();
-    io_manager->registerEvent(sockfd, IOManager::Write, coroutine::Executor::getCurrent());
+    io_manager->registerEvent(
+        sockfd, IOManager::Write, coroutine::Executor::getCurrent());
     coroutine::Executor::getCurrent()->yield();
 
-    //yield返回的时候, 说明connect执行完成(失败).
-    int error = 0;
+    // yield返回的时候, 说明connect执行完成(失败).
+    int error     = 0;
     socklen_t len = sizeof(int);
-    if(-1 == getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len)) {
+    if (-1 == getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len)) {
         return -1;
     }
-    if(!error) {
+    if (!error) {
         return 0;
     } else {
         errno = error;
@@ -148,8 +156,9 @@ int co_connect(int sockfd, const sockaddr* addr, socklen_t addrlen) {
 
 int co_accept(int s, sockaddr* addr, socklen_t* addrlen) {
     hook_init();
-    int fd = static_cast<int>(ioInner(s, IOManager::Read, accept_sys, addr, addrlen));
-    if(fd >= 0) {
+    int fd = static_cast<int>(
+        ioInner(s, IOManager::Read, accept_sys, addr, addrlen));
+    if (fd >= 0) {
         int flags = fcntl_sys(fd, F_GETFL, 0);
         if (!(flags & O_NONBLOCK)) {
             fcntl_sys(fd, F_SETFL, flags | O_NONBLOCK);

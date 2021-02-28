@@ -12,7 +12,7 @@ thread_local std::unique_ptr<IOManager> t_io_manager = nullptr;
 
 constexpr int epoll_create_size   = 1000;
 constexpr int epoll_wait_max_size = 64;
-Logger::ptr G_Logger = LogManager::getInstance()->getLogger("system");
+static Logger::ptr G_Logger = LogManager::getInstance()->getLogger("system");
 
 IOManager::IOManager() : scheduler_{} {
     scheduler_.setExitWithTasksProcessed(true);
