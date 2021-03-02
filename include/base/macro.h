@@ -18,6 +18,13 @@
 #define LON_OTHER_OS
 #endif
 
+
+#if defined(__GNUC__)
+#define LON_ALWAYS_INLINE inline __attribute__((__always_inline__))
+#else
+#define LON_ALWAYS_INLINE inline
+#endif
+
 #define LON_HAVE_O_CLOEXEC 1
 
 

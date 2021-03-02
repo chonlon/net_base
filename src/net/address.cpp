@@ -221,6 +221,10 @@ const sockaddr* IPV4Address::getAddr() const {
     return reinterpret_cast<const sockaddr*>(&addr_);
 }
 
+sockaddr* IPV4Address::getAddrMutable() {
+    return reinterpret_cast<sockaddr*>(&addr_);
+}
+
 String IPV4Address::toString() const {
     return fmt::format("{}:{}", getAddressStr(), ::ntohs(addr_.sin_port));
 }
@@ -292,6 +296,10 @@ const sockaddr* IPV6Address::getAddr() const {
     return reinterpret_cast<const sockaddr*>(&addr_);
 }
 
+sockaddr* IPV6Address::getAddrMutable() {
+    reinterpret_cast<sockaddr*>(&addr_);
+}
+
 String IPV6Address::toString() const {
     char buffer[INET6_ADDRSTRLEN + IFNAMSIZ + 1];
     if(!inet_ntop(AF_INET6, addr_.sin6_addr.s6_addr , buffer, INET_ADDRSTRLEN)) {
@@ -340,6 +348,10 @@ UnixAddress::UnixAddress() noexcept {
 
 const sockaddr* UnixAddress::getAddr() const {
     return reinterpret_cast<const sockaddr*>(&addr_);
+}
+
+sockaddr* UnixAddress::getAddrMutable() {
+    reinterpret_cast<sockaddr*>(&addr_);
 }
 
 String UnixAddress::toString() const {

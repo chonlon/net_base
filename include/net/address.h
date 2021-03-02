@@ -12,7 +12,8 @@ namespace lon::net {
 class SockAddress
 {
 public:
-
+    using UniquePtr = std::unique_ptr<SockAddress>;
+    using SharedPtr = std::shared_ptr<SockAddress>;
 
     LON_NODISCARD
     virtual socklen_t getSockLen() const = 0;
@@ -23,8 +24,13 @@ public:
     LON_NODISCARD
     sa_family_t isInetFamily() const;
 
+    LON_NODISCARD
     virtual const sockaddr* getAddr() const = 0;
 
+    LON_NODISCARD
+    virtual sockaddr* getAddrMutable() = 0;
+
+    LON_NODISCARD
     virtual String toString() const = 0;
 
     bool operator<(const SockAddress& rhs) const;
@@ -71,6 +77,7 @@ public:
 
 
     const sockaddr* getAddr() const override;
+    sockaddr* getAddrMutable() override;
     String toString() const override;
     String getAddressStr() const override;
     void setPort(uint16_t port) override;
@@ -102,6 +109,7 @@ public:
     void setByHostAndPort(StringArg host, uint16_t port);
 
     const sockaddr* getAddr() const override;
+    sockaddr* getAddrMutable() override;
     String toString() const override;
     String getAddressStr() const override;
     void setPort(uint16_t port) override;
@@ -121,6 +129,7 @@ class UnixAddress : public SockAddress
 public:
 
     const sockaddr* getAddr() const override;
+    sockaddr* getAddrMutable() override;
     String toString() const override;
 
 

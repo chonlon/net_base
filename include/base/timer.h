@@ -108,7 +108,7 @@ public:
     /**
      * @brief 获取指定时间的首个过期定时器.
      * @param [in] timer  如果存在过期定时器, 返回timer指针,
-     * 否则timer指针不被设置. 此函数不拥有指针所有权.
+     * 否则timer指针不被设置.
      * @param cur_ms 当前时间.
      * @return true如果存在, 否则返回false.
      */
@@ -142,7 +142,7 @@ public:
     }
 
 private:
-    mutable Mutex timer_mutex_;
-    std::multiset<Timer::Ptr, Timer::Comparator> timers_;
+    mutable Mutex timer_mutex_{};
+    std::multiset<Timer::Ptr, Timer::Comparator> timers_{};
 };
 }  // namespace lon
