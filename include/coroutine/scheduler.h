@@ -88,7 +88,15 @@ public:
         return ready_executors_.size();
     }
 
+    /**
+     * @brief 应该只从Scheduler线程访问
+    */
     static Scheduler* getThreadLocal();
+
+    /**
+     * @brief 应该只从Scheduler线程设置
+    */
+    static void setThreadLocal(std::shared_ptr<Scheduler> scheduler);
 private:
     void threadScheduleFunc();
 

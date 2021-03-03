@@ -70,10 +70,15 @@ public:
     }
 
     /**
-     * @brief 获取当前线程的IOManager.
-     * @return IOManager指针, 返回不拥有指针所有权, 指针有效期与thread local变量相同.
+     * @brief 获取当前线程的IOManager, 应该只从IOManager线程访问.
+     * @return IOManager指针, 返回不拥有指针所有权, 指针有效期最短与thread local变量相同.
     */
     static IOManager* getThreadLocal();
+
+    /**
+     * @brief 设置当前线程的IOManager, 应该只从IOManager线程访问.
+    */
+    static void setThreadLocal(std::shared_ptr<IOManager> io_manager);
 private:
     struct FdEvents
     {

@@ -3,7 +3,7 @@
 static auto G_logger = lon::LogManager::getInstance()->getLogger("system");
 
 namespace lon::coroutine {
-thread_local std::unique_ptr<Scheduler> t_scheduler = nullptr;
+thread_local std::shared_ptr<Scheduler> t_scheduler = nullptr;
 
 Scheduler::Scheduler() {
     Executor::getCurrent();
@@ -50,6 +50,10 @@ Scheduler* Scheduler::getThreadLocal() {
 
     t_scheduler = std::make_unique<Scheduler>();
     return t_scheduler.get();
+}
+
+void Scheduler::setThreadLocal(std::shared_ptr<Scheduler> scheduler) {
+    t_scheduler = scheduler;
 }
 
 void Scheduler::threadScheduleFunc() {

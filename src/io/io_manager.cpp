@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 namespace lon::io {
-thread_local std::unique_ptr<IOManager> t_io_manager = nullptr;
+thread_local std::shared_ptr<IOManager> t_io_manager = nullptr;
 
 constexpr int epoll_create_size   = 1000;
 constexpr int epoll_wait_max_size = 64;
@@ -113,6 +113,10 @@ IOManager* IOManager::getThreadLocal() {
 
     t_io_manager = std::make_unique<IOManager>();
     return t_io_manager.get();
+}
+
+void IOManager::setThreadLocal(std::shared_ptr<IOManager> io_manager) {
+    t_io_manager = io_manager;
 }
 
 
