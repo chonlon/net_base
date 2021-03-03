@@ -44,12 +44,11 @@ bool Scheduler::addRemoteExecutor(Executor::Ptr executor) {
     return remote_tasks_.insertFront(executor);
 }
 
-Scheduler* Scheduler::getThreadLocal() {
+std::shared_ptr<Scheduler> Scheduler::getThreadLocal() {
     if (t_scheduler)
-        return t_scheduler.get();
+        t_scheduler = std::make_unique<Scheduler>();
 
-    t_scheduler = std::make_unique<Scheduler>();
-    return t_scheduler.get();
+    return t_scheduler;
 }
 
 void Scheduler::setThreadLocal(std::shared_ptr<Scheduler> scheduler) {

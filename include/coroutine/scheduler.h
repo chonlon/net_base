@@ -91,7 +91,7 @@ public:
     /**
      * @brief 应该只从Scheduler线程访问
     */
-    static Scheduler* getThreadLocal();
+    static std::shared_ptr<Scheduler> getThreadLocal();
 
     /**
      * @brief 应该只从Scheduler线程设置

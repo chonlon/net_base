@@ -8,7 +8,7 @@ class SimpleIOBalancer : public IOWorkBalancer
 public:
 
     ~SimpleIOBalancer() override {}
-    void schedule(coroutine::Executor::Ptr executor) override {
+    void schedule(coroutine::Executor::Ptr executor, std::any arg) override {
         IOManager::getThreadLocal()->addExecutor(executor);
     }
 };

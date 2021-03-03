@@ -107,12 +107,11 @@ void IOManager::stop() {
 }
 
 
-IOManager* IOManager::getThreadLocal() {
-    if (t_io_manager)
-        return t_io_manager.get();
+std::shared_ptr<IOManager> IOManager::getThreadLocal() {
+    if (!t_io_manager)
+        t_io_manager = std::make_shared<IOManager>();
 
-    t_io_manager = std::make_unique<IOManager>();
-    return t_io_manager.get();
+    return t_io_manager;
 }
 
 void IOManager::setThreadLocal(std::shared_ptr<IOManager> io_manager) {
