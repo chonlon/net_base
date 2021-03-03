@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "balancer.h"
 #include "io/io_manager.h"
 
@@ -6,8 +6,8 @@
 
 namespace lon::io {
 /**
- * @brief Ëæ»úÆ½¾ù·ÖÅä¾ùºâÆ÷
-*/
+ * @brief éšæœºå¹³å‡åˆ†é…å‡è¡¡å™¨
+ */
 class RandomIOBalancer : IOWorkBalancer
 {
 public:
@@ -22,7 +22,6 @@ public:
 
 
 private:
-
     std::vector<std::shared_ptr<IOManager>> managers_;
     size_t balance_thread_count_;
     std::vector<Thread> threads_;
@@ -30,8 +29,8 @@ private:
 
 
 /**
- * @brief Ë³ĞòÆ½¾ù·ÖÅä¾ùºâÆ÷
-*/
+ * @brief é¡ºåºå¹³å‡åˆ†é…å‡è¡¡å™¨
+ */
 class SequenceIOBalancer : IOWorkBalancer
 {
 public:
@@ -45,10 +44,9 @@ public:
     void schedule(coroutine::Executor::Ptr executor, std::any arg) override;
 
 private:
-
     std::vector<std::shared_ptr<IOManager>> managers_;
     size_t balance_thread_count_;
     std::vector<Thread> threads_;
 };
 
-}
+}  // namespace lon::io

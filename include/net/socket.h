@@ -53,11 +53,11 @@ namespace lon::net {
 
         int bind(SockAddress::SharedPtr local_addr);
         std::optional<TcpConnection> accept(); //TODO 流式的不止TCP, UnixAddress应该也有.
-        int listen(int backlog);
+        int listen(int backlog = SOMAXCONN);
         std::optional<TcpConnection> connect(SockAddress::UniquePtr peer_addr);
 
-        LON_NODISCARD
-        int fd() const {return fd_;}
+        LON_NODISCARD LON_ALWAYS_INLINE
+        int fd() const noexcept {return fd_;}
 
         LON_NODISCARD
         SockAddress::SharedPtr getLocalAddress() const { return local_address; }
