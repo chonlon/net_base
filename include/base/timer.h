@@ -33,6 +33,7 @@ struct Timer
 
     Timer(MsStampType _interval, CallbackType _callback, bool _repeat = false)
         : repeat{_repeat}, interval{_interval}, callback{std::move(_callback)} {
+        constexpr auto i = static_cast<MsStampType>(-1);
         auto cur_ms = currentMs();
         if (interval > static_cast<MsStampType>(-1) - cur_ms)
             target_timestamp = static_cast<MsStampType>(-1);
@@ -70,7 +71,7 @@ public:
      * @brief 获取所有过期定时器.
      * @return 过期定时器列表.
      */
-    std::vector<Timer::Ptr> getExpiredTimers() {
+    std::vector<Timer::Ptr> takeExpiredTimers() {
         Timer::MsStampType cur_ms = currentMs();
         Timer::Ptr current_timer  = std::make_shared<Timer>(cur_ms);
         std::vector<Timer::Ptr> result;
@@ -112,7 +113,7 @@ public:
      * @param cur_ms 当前时间.
      * @return true如果存在, 否则返回false.
      */
-    bool getFirstIfExpired(Timer::Ptr& timer, Timer::MsStampType cur_ms) {
+    bool takeFirstIfExpired(Timer::Ptr& timer, Timer::MsStampType cur_ms) {
 
         std::lock_guard<Mutex> locker(timer_mutex_);
         if (timers_.empty())

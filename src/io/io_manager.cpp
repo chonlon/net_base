@@ -158,7 +158,7 @@ void IOManager::blockPending() {
 
 
     {// 执行定时任务.
-        auto timers = timer_manager_.getExpiredTimers();
+        auto timers = timer_manager_.takeExpiredTimers();
         for(auto& timer : timers) {
             scheduler_.addExecutor(std::make_shared<coroutine::Executor>(
                 std::move(timer->callback)));
