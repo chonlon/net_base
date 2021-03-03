@@ -46,6 +46,10 @@ public:
         scheduler_.removeExecutor(executor);
     }
 
+    void addRemoteTask(coroutine::Executor::Ptr executor) {
+        scheduler_.addRemoteExecutor(executor);
+    }
+
     /**
      * @brief 注册定时器.
      * @param timer 定时器, 带回调, 注册回调应不为空.

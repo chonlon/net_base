@@ -26,18 +26,22 @@ Scheduler::~Scheduler() {
     std::cout << "Scheduler destruct in thread " << lon::getThreadIdRaw();
 }
 
-bool Scheduler::addExecutor(Executor::Ptr executor, size_t index) {
+bool Scheduler::addExecutor(Executor::Ptr executor) {
     if (stopping_)
         return false; //拒绝继续添加任务.
 
-    executors_.push_back(executor);
+    ready_executors_.push_back(executor);
     return true;
 }
 
 void Scheduler::removeExecutor(Executor::Ptr executor) {
-    auto iter = std::find(executors_.begin(), executors_.end(), executor);
-    if (iter != executors_.end())
-        executors_.erase(iter);
+    auto iter = std::find(ready_executors_.begin(), ready_executors_.end(), executor);
+    if (iter != ready_executors_.end())
+        ready_executors_.erase(iter);
+}
+
+bool Scheduler::addRemoteExecutor(Executor::Ptr executor) {
+    return remote_tasks_.insertFront(executor);
 }
 
 Scheduler* Scheduler::getThreadLocal() {
@@ -52,10 +56,14 @@ void Scheduler::threadScheduleFunc() {
 
     while (!stop_pending()) {
         Executor::Ptr executor = nullptr;
-        if (!executors_.empty()) {
-            //首先尝试从当前线程的任务队列中取出任务
-            executor = executors_.front();
-            executors_.pop_front();
+
+        //尝试从其它线程的任务队列中取出任务并加入就绪队列
+        remote_tasks_.scheduleAll(this);
+
+        if (!ready_executors_.empty()) {
+            //尝试从当前线程的(就绪)任务队列中取出任务
+            executor = ready_executors_.front();
+            ready_executors_.pop_front();
         }
         if (executor == nullptr) {
             // 当前没有任务.

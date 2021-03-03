@@ -29,14 +29,20 @@ public:
     ~Scheduler();
 
     /**
-     * @brief 添加executor到指定线程执行
+     * @brief 添加executor到运行队列, 应该在Scheduler同一线程中调用.
      * @param executor 
-     * @param index 指定线程的index, 如果指定线程为0, 则为随机线程执行
      * @return 如果scheduler正在停止, 那么会拒绝添加任务, 返回false. 添加成功返回true.
     */
-    bool addExecutor(Executor::Ptr executor, size_t index = 0);
+    bool addExecutor(Executor::Ptr executor);
 
     void removeExecutor(Executor::Ptr executor);
+
+    /**
+     * @brief 添加executor当待运行队列, 在不同线程中调用安全.
+     * @param executor
+     * @return 如果添加成功返回true.
+    */
+    bool addRemoteExecutor(Executor::Ptr executor);
 
 
     void run() {
@@ -79,9 +85,8 @@ public:
 
 
     LON_NODISCARD auto getExecutorsCount() const -> size_t {
-        return executors_.size();
+        return ready_executors_.size();
     }
-
 
     static Scheduler* getThreadLocal();
 private:
@@ -91,6 +96,45 @@ private:
         return stopped_ && stop_pending_func_();
     }
 
+    struct RemoteTaskList
+    {
+        struct Node
+        {
+            Executor::Ptr value;
+            Node* next;
+
+            Node(Executor::Ptr _value, Node* _next)
+                : value{std::move(_value)},
+                  next{_next} {
+            }
+        };
+        std::atomic<Node*> head = nullptr;
+
+        bool insertFront(Executor::Ptr executor) {
+            auto new_node = new Node(executor, nullptr);
+            auto old_head = head.load(std::memory_order_relaxed);
+
+            new_node->next = old_head;
+            head.compare_exchange_strong(old_head, new_node, std::memory_order_release, std::memory_order_relaxed);
+            return old_head == nullptr;
+        }
+
+        void scheduleAll(Scheduler* scheduler) {
+            if(auto _head = head.exchange(nullptr); _head) {
+                while(_head) {
+                    scheduler->addExecutor(_head->value);
+                    auto temp = _head;
+                    _head = _head->next;
+                    delete temp;
+                }
+            }
+        }
+
+        bool empty() const {
+            return head.load() == nullptr;
+        }
+    };
+
 private:
     bool stopping_{false};
     bool stopped_{false};
@@ -99,8 +143,10 @@ private:
     BlockFuncType block_pending_func_{nullptr};
     StopFuncType stop_pending_func_{nullptr};
     
-    std::list<Executor::Ptr> executors_{};
+    std::list<Executor::Ptr> ready_executors_{};
     Executor::Ptr scheduler_executor_ = nullptr;
+
+    RemoteTaskList remote_tasks_;
 };
 
 
