@@ -19,6 +19,7 @@ IOManager::IOManager() : scheduler_{} {
     scheduler_.setBlockPendingFunc(std::bind(&IOManager::blockPending, this));
 
     initEpoll();
+    initPipe();
 }
 
 bool IOManager::registerEvent(int fd,
@@ -92,7 +93,6 @@ bool IOManager::registerTimer(Timer::Ptr timer) {
         return false;
     assert(timer->callback);
     timer_manager_.addTimer(std::move(timer));
-    wakeUpIfBlocking();
     return true;
 }
 
@@ -103,7 +103,6 @@ void IOManager::cancelTimer(Timer::Ptr timer) {
 void IOManager::stop() {
     stopped = true;
     scheduler_.stop();
-    wakeUpIfBlocking();
 }
 
 
@@ -128,10 +127,20 @@ void IOManager::initEpoll() {
     }
 }
 
+void IOManager::initPipe() {
+    int ret = pipe(wakeup_pipe_fd_);
+    LON_ERROR_INVOKE_ASSERT(ret != -1, "pipe open", "", G_Logger);
 
-void IOManager::wakeUpIfBlocking() {
-    // if (scheduler_.getIdleThreadCount() != 0)
-    // write(wakeup_pipe_fd_[1], "1", 1);
+    ret = fcntl(wakeup_pipe_fd_[0], F_SETFL, O_NONBLOCK);
+    LON_ERROR_INVOKE_ASSERT(ret != -1, "fcntl", "cmd: F_SETFL, op: O_NONBLOCK", G_Logger);
+
+    epollAdd(wakeup_pipe_fd_[0], EPOLLIN | EPOLLOUT);
+}
+
+void IOManager::wakeup() {
+    while (wake_lock_.test_and_set(std::memory_order_acquire)) {}// acquire lock
+    write(wakeup_pipe_fd_[1], "1", 1);
+    wake_lock_.clear(std::memory_order_release); // release lock
 }
 
 void IOManager::epollAdd(int fd, uint32_t events) const {
@@ -171,7 +180,9 @@ void IOManager::blockPending() {
 
     for (int i = 0; i < ret; ++i) {
         const epoll_event ep_event = epoll_events[i];
-        {
+        if (ep_event.data.fd == wakeup_pipe_fd_[0]) {
+            continue;
+        } else {
             {// 删除事件.
                 uint32_t left_events = fd_events_[ep_event.data.fd].registered_events;
 

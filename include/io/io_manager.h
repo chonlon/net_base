@@ -26,7 +26,7 @@ public:
     };
 
     /**
-     * @brief 对fd对应的io事件注册回调, 线程安全, 如果对应的callback已存在, 那么将会替换已注册的.
+     * @brief 对fd对应的io事件注册回调, 线程安全, 如果对应的callback已存在, 那么将会替换已注册的, 只在IOManager线程调用.
      * @param fd io的fd
      * @param type 读写类型
      * @param executor 事件对应的执行协程.
@@ -38,6 +38,9 @@ public:
     bool hasEvent(int fd, EventType type);
     void removeEvent(int fd, uint32_t events);
 
+    /**
+     * @brief see @Scheduler::addRemoteTask, 只在IOManager线程调用.
+    */
     void addExecutor(coroutine::Executor::Ptr executor) {
         scheduler_.addExecutor(executor);
     }
@@ -46,12 +49,16 @@ public:
         scheduler_.removeExecutor(executor);
     }
 
+    /**
+     * @brief see @Scheduler::addRemoteTask, 在另一线程是调用安全.
+    */
     void addRemoteTask(coroutine::Executor::Ptr executor) {
         scheduler_.addRemoteExecutor(executor);
+        wakeup();
     }
 
     /**
-     * @brief 注册定时器.
+     * @brief 注册定时器, 只在IOManager线程调用.
      * @param timer 定时器, 带回调, 注册回调应不为空.
      * @return 是否注册成功, 如果IoManager已经stop, 那么注册会失败.
     */
@@ -91,9 +98,10 @@ private:
 
 
     void initEpoll();
+    void initPipe();
 
     // wake up from epoll_wait if blocking.
-    void wakeUpIfBlocking();
+    void wakeup();
 
     void epollAdd(int fd, uint32_t events) const;
     void epollMod(int fd, uint32_t events) const;
@@ -104,8 +112,10 @@ private:
     */
     void blockPending();
 
+    std::atomic_flag wake_lock_ = ATOMIC_FLAG_INIT; // wakeup 函数的spinlock.
     bool stopped{false};
     int epoll_fd_{ -1 };
+    int wakeup_pipe_fd_[2]{ -1,-1 };
     coroutine::Scheduler scheduler_;
     TimerManager timer_manager_;
     std::vector<FdEvents> fd_events_;
