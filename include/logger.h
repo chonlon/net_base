@@ -148,7 +148,7 @@ public:
     void log(LogEvent) noexcept;
 
     void addOneFlusher(std::unique_ptr<log::Flusher> flusher) {
-        if (flusher != nullptr)
+        if (LIKELY(flusher != nullptr))
             flushers_[flusher_count_++] = std::move(flusher);
     }
 

@@ -29,7 +29,7 @@ String getHostWithoutBuffer() {
         if ((::gethostname(hostname, 1024)) == 0)
             break;
     }
-    if (i == 5)
+    if (UNLIKELY(i == 5))
         throw ExecFailed(
             fmt::format("get hostname failed with errno:{}", errno));
     return String(static_cast<const char*>(hostname));

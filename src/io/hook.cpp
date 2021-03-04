@@ -1,4 +1,6 @@
 #include "io/hook.h"
+
+#include "base/macro.h"
 #include "io/co_io_function.h"
 
 #include <dlfcn.h>
@@ -41,7 +43,7 @@ bool lon::io::isHookEnabled() {
     OP(setsockopt)
 
 void lon::io::hook_init() {
-    if (G_hookInited)
+    if (LIKELY(G_hookInited))
         return;
 
 #define HOOK(name) \

@@ -72,7 +72,7 @@ struct GetTimeSpan
  */
 template <typename F, typename... Args>
 milliseconds::rep invokeAndMeasure(F func, Args&&... args) {
-    int result;
+    size_t result;
     {
         GetTimeSpan<> span(&result);
         func(std::forward<Args>(args)...);

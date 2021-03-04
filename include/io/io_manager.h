@@ -66,6 +66,7 @@ public:
 
     void cancelTimer(Timer::Ptr timer);
 
+    //TODO run and stop should be thread safe.
     void run() {
         scheduler_.run();
     }

@@ -45,15 +45,18 @@ void Executor::executorMainFunc() {
         assert(t_cur_executor);
         assert(t_cur_executor->callback_);
         t_cur_executor->callback_();
+        // 协程中销毁回调.
+        t_cur_executor->callback_ = ExectutorFunc();
     } catch (...) {
         t_cur_executor->state_ = State::Aborted;
         throw;
     }
+    
     t_cur_executor->terminal();
 }
 
 Executor::~Executor() {
-    if (this == t_main_executor.get()) //TODO 这个信息似乎不是很重要, 需要移除吗.
+    if (UNLIKELY(this == t_main_executor.get()))
         // 不能使用logger, 因为此时主协程正在析构.
         fmt::print(
             "notion: destroying thread main executor! thread id:{}, thread "
@@ -126,7 +129,7 @@ void Executor::reset(ExectutorFunc func, bool back_to_caller) {
 }
 
 void Executor::swapContext(Executor* dst, Executor* src) {
-    if (swapcontext(dst->context_, src->context_)) {
+    if (UNLIKELY(swapcontext(dst->context_, src->context_))) {
         LON_LOG_FATAL(G_logger)
             << "swap context failed, executor id:" << src->id_ << ';'
             << dst->id_ << "stack:\n" << backtraceString();
@@ -139,7 +142,7 @@ void Executor::initToReady() {
 }
 
 void Executor::makeContext() {
-    if (stack_size_ == 0)
+    if (UNLIKELY(stack_size_ == 0))
         stack_size_ = DefaultStackSize;
 
     if (stack_)
@@ -188,7 +191,7 @@ void Executor::doExec(bool main) {
         case State::HoldUp:
         case State::Ready:
             state_ = State::Exec;
-            if(main)
+            if(UNLIKELY(main))
                 mainExecInner();
             else
                 execInner();
@@ -209,7 +212,7 @@ void Executor::doExec(bool main) {
 }
 
 Executor::Ptr Executor::getCurrent() {
-    if (t_cur_executor)
+    if (LIKELY(!!t_cur_executor))
         return t_cur_executor;
     
     t_cur_executor = std::make_shared<Executor>();
@@ -243,7 +246,7 @@ void Executor::terminalInner() {
 }
 
 void Executor::getCurrentContext() {
-    if (getcontext(context_)) {
+    if (UNLIKELY(getcontext(context_))) {
         LON_LOG_ERROR(G_logger) << "get context failed" << backtraceString();
     }
 }

@@ -26,7 +26,7 @@ bool IOManager::registerEvent(int fd,
                               EventType type,
                               coroutine::Executor::Ptr executor,
                               bool call_once) {
-    if (stopped)
+    if (UNLIKELY(stopped))
         return false;
     if (static_cast<size_t>(fd) >= fd_events_.size()) {
         // fd_events_.resize(static_cast<size_t>(fd));
@@ -107,7 +107,7 @@ void IOManager::stop() {
 
 
 std::shared_ptr<IOManager> IOManager::getThreadLocal() {
-    if (!t_io_manager)
+    if (UNLIKELY(!t_io_manager))
         t_io_manager = std::make_shared<IOManager>();
 
     return t_io_manager;

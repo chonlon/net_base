@@ -27,7 +27,7 @@ namespace lon {
      * @return uint32_t 线程id.
      */
     inline uint32_t getThreadId() noexcept {
-        if(G_ThreadId == 0) { //thread id is not cached.
+        if(UNLIKELY(G_ThreadId == 0)) { //thread id is not cached.
             G_ThreadId = getThreadIdRaw();
         }
         return G_ThreadId;

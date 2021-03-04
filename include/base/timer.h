@@ -35,7 +35,8 @@ struct Timer
         : repeat{_repeat}, interval{_interval}, callback{std::move(_callback)} {
         constexpr auto i = static_cast<MsStampType>(-1);
         auto cur_ms = currentMs();
-        if (interval > static_cast<MsStampType>(-1) - cur_ms)
+        //时间溢出.
+        if (UNLIKELY(interval > static_cast<MsStampType>(-1) - cur_ms))
             target_timestamp = static_cast<MsStampType>(-1);
         else
             target_timestamp = interval + cur_ms;

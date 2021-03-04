@@ -27,7 +27,7 @@ Scheduler::~Scheduler() {
 }
 
 bool Scheduler::addExecutor(Executor::Ptr executor) {
-    if (stopping_)
+    if (UNLIKELY(stopping_))
         return false; //拒绝继续添加任务.
 
     ready_executors_.push_back(executor);
@@ -45,7 +45,7 @@ bool Scheduler::addRemoteExecutor(Executor::Ptr executor) {
 }
 
 std::shared_ptr<Scheduler> Scheduler::getThreadLocal() {
-    if (t_scheduler)
+    if (UNLIKELY(!t_scheduler))
         t_scheduler = std::make_unique<Scheduler>();
 
     return t_scheduler;
