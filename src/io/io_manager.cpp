@@ -139,7 +139,8 @@ void IOManager::initPipe() {
 
 void IOManager::wakeup() {
     while (wake_lock_.test_and_set(std::memory_order_acquire)) {}// acquire lock
-    write(wakeup_pipe_fd_[1], "1", 1);
+    ssize_t ret = write(wakeup_pipe_fd_[1], "1", 1);
+    LON_ERROR_INVOKE_ASSERT(ret != -1, write, "write to pipe", G_Logger);
     wake_lock_.clear(std::memory_order_release); // release lock
 }
 
@@ -218,7 +219,7 @@ void IOManager::blockPending() {
             // 执行.
             // addExecutor 必定成功.
             if (ep_event.events & EPOLLIN) {
-                bool add_ret = scheduler_.addExecutor(
+                [[maybe_unused]] bool add_ret = scheduler_.addExecutor(
                     fd_events_[ep_event.data.fd].read_executor);
 
                 if (fd_events_[ep_event.data.fd].read_call_once) {
@@ -227,7 +228,7 @@ void IOManager::blockPending() {
                 assert(add_ret);
             }
             if (ep_event.events & EPOLLOUT) {
-                bool add_ret = scheduler_.addExecutor(
+                [[maybe_unused]] bool add_ret = scheduler_.addExecutor(
                     fd_events_[ep_event.data.fd].write_executor);
 
                 if (fd_events_[ep_event.data.fd].write_call_once) {

@@ -46,18 +46,18 @@ LogWrapper::LogWrapper(std::shared_ptr<Logger> _logger_ptr, LogEvent _event)
 LogWrapper::~LogWrapper() {
     event.content = stream.str();
     Level level   = event.level;
-    logger_ptr->log(std::move(event));
+    logger_ptr->log(&event);
     if (level == Level::FATAL) {
         abort();
     }
 }
 
-void Logger::log(LogEvent event) noexcept {
+void Logger::log(LogEvent* event) noexcept {
     StringStream ss;
-    event.logger_name      = name_;
-    event.datetime_pattern = datetime_pattern_;
+    event->logger_name      = name_;
+    event->datetime_pattern = datetime_pattern_;
     for (auto& i : formatters_) {
-        i(ss, &event);
+        i(ss, event);
     }
     for (int i = 0; i < flusher_count_; ++i) {
         flushers_[i]->flush(ss.str());

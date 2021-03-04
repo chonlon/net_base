@@ -73,6 +73,7 @@ ui*.h
 **/*[Dd]ebug/**
 **/*[Rr]elease/**
 **/*[Bb]uild/**
+**/*[Bb]uild-rel/**
 
 #ignore vs dir
 **/.vs/**

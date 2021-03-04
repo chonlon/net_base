@@ -16,6 +16,7 @@ AddTest("net_base" "net_base" "./" ${TESTS})
 set(
 	BENCHMARKS
 	file_write_speed.cpp
+	log_speed.cpp
 )
 
 AddExeFromFilesWithLib("net_base" "net_base" "./" ${BENCHMARKS})

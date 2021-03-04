@@ -145,7 +145,7 @@ public:
     }
 
 
-    void log(LogEvent) noexcept;
+    void log(LogEvent*) noexcept;
 
     void addOneFlusher(std::unique_ptr<log::Flusher> flusher) {
         if (LIKELY(flusher != nullptr))

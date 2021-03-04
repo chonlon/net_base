@@ -30,6 +30,7 @@ set(CXX_FLAGS
     -rdynamic
     #ignore
     -Wno-builtin-macro-redefined
+    -Wno-unused-result
     )
 if(CMAKE_BUILD_BITS EQUAL 32)
   list(APPEND CXX_FLAGS "-m32")
