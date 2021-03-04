@@ -7,23 +7,6 @@
 #include <fmt/core.h>
 #include <fmt/ranges.h>
 
-static void ListAllMember(const std::string& prefix,
-                          const YAML::Node& node,
-                          std::list<std::pair<std::string, const YAML::Node> >& output) {
-    if (prefix.find_first_not_of("abcdefghikjlmnopqrstuvwxyz._012345678")
-        != std::string::npos) {
-        // SYLAR_LOG_ERROR(SYLAR_LOG_ROOT()) << "Config invalid name: " << prefix << " : " << node;
-        return;
-    }
-    output.push_back(std::make_pair(prefix, node));
-    if (node.IsMap()) {
-        for (auto it = node.begin();
-            it != node.end(); ++it) {
-            ListAllMember(prefix.empty() ? it->first.Scalar()
-                : prefix + "." + it->first.Scalar(), it->second, output);
-        }
-    }
-}
 
 template <typename T>
 T get(const lon::String& key, YAML::Node node_)  {
@@ -47,13 +30,13 @@ T get(const lon::String& key, YAML::Node node_)  {
 
 void raw_yaml() {
     CaseMarker marker{"raw_yaml"};
-    auto root = YAML::LoadFile("bin/conf/test.yml");
+    auto root = YAML::LoadFile("conf/test.yml");
     std::cout << root["system"]["port"].as<int>();
     fmt::print("{}\n", root["system"]["int_vec"].as<std::vector<int>>());
 }
 void raw2() {
     CaseMarker marker{"raw_2"};
-    auto root = YAML::LoadFile("bin/conf/test.yml");
+    auto root = YAML::LoadFile("conf/test.yml");
     fmt::print("{}\n", get<int>("system.port", root));
 
     std::cout << root << "\n\n\n";
