@@ -30,5 +30,5 @@ namespace lon::sockopt {
 
 
     ssize_t recvFrom(int sock_fd, void* buffer, size_t length, lon::net::SockAddress* peer_addr, int flags);
-    ssize_t recvFrom(int sock_fd, iovec* buffers, size_t length, lon::net::SockAddress* peer_addr);
+    ssize_t recvFrom(int sock_fd, iovec* buffers, size_t length, lon::net::SockAddress* peer_addr, int flags);
 }
