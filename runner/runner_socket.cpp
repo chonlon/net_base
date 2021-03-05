@@ -1,7 +1,10 @@
+#include "coroutine/executor.h"
 #include "net/address.h"
 #include "net/socket.h"
 #include "net/tcp/connection.h"
 #include "io/hook.h"
+#include "io/io_manager.h"
+
 
 #include <fmt/core.h>
 
@@ -26,5 +29,6 @@ void tcp() {
 
 int main() {
     lon::io::setHookEnabled(true);
-    tcp();
+    lon::io::IOManager::getThreadLocal()->addExecutor(std::make_shared<lon::coroutine::Executor>(tcp));
+    lon::io::IOManager::getThreadLocal()->run();
 }

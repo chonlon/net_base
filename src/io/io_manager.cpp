@@ -145,17 +145,17 @@ void IOManager::wakeup() {
 }
 
 void IOManager::epollAdd(int fd, uint32_t events) const {
-    const int ret = epollOperation(epoll_fd_, EPOLL_CTL_ADD, events, fd);
+    const int ret = invokeNoIntr(epollOperation, epoll_fd_, EPOLL_CTL_ADD, events, fd);
     LON_ERROR_INVOKE_ASSERT(ret != -1, "epoll_ctl", fmt::format("type: add, events:{}, fd:{}", events, fd),G_Logger);
 }
 
 void IOManager::epollMod(int fd, uint32_t events) const {
-    const int ret = epollOperation(epoll_fd_, EPOLL_CTL_MOD, events, fd);
+    const int ret = invokeNoIntr(epollOperation, epoll_fd_, EPOLL_CTL_MOD, events, fd);
     LON_ERROR_INVOKE_ASSERT(ret != -1, "epoll_ctl", fmt::format("type: mod, events:{}, fd:{}", events, fd), G_Logger);
 }
 
 void IOManager::epollDel(int fd) const {
-    const int ret = epollOperation(epoll_fd_, EPOLL_CTL_DEL, EPOLLET, fd);
+    const int ret = invokeNoIntr(epollOperation,epoll_fd_, EPOLL_CTL_DEL, EPOLLET, fd);
     LON_ERROR_INVOKE_ASSERT(ret != -1, "epoll_ctl", fmt::format("type: del,  fd:{}", fd), G_Logger);
 }
 
@@ -165,7 +165,7 @@ void IOManager::blockPending() {
 
     {
         const int next_interval = static_cast<int>(timer_manager_.getNextInterval());
-        ret = epoll_wait(epoll_fd_, epoll_events, epoll_wait_max_size, next_interval);
+        ret = invokeNoIntr(epoll_wait, epoll_fd_, epoll_events, epoll_wait_max_size, next_interval);
         LON_ERROR_INVOKE_ASSERT(ret != -1, "epoll_wait", fmt::format("type: add, epoll_wait_max_size:{}, next_interval:{}", epoll_wait_max_size, next_interval), G_Logger);
     }
 
@@ -177,7 +177,7 @@ void IOManager::blockPending() {
                 std::move(timer->callback)));
         }
     }
-
+ 
 
     for (int i = 0; i < ret; ++i) {
         const epoll_event ep_event = epoll_events[i];
