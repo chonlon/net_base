@@ -15,7 +15,7 @@ class TcpServer
 {
 public:
     using OnConnectionCallbackType =
-    std::function<void(TcpConnection connection)>;
+    std::function<void(std::shared_ptr<TcpConnection> connection)>;
 
     using SocketInitCallbackType = std::function<void(Socket& socket)>;
 

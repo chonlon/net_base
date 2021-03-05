@@ -70,6 +70,13 @@ set(
     src/io/io_manager.cpp
     src/io/hook.cpp
     src/io/co_io_function.cpp
+    src/net/address.cpp
+    src/net/socket.cpp
+    src/net/socket_opt.cpp
+    src/net/tcp/connection.cpp
+    src/net/tcp/tcp_server.cpp
+    src/balancer/io/avg_balancer.cpp
+    src/balancer/io/prio_balancer.cpp
 )
 
 set(

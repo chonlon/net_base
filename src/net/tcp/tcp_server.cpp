@@ -39,6 +39,7 @@ std::optional<std::vector<SockAddress::SharedPtr>> TcpServer::bind(
         LON_LOG_ERROR(G_logger) << fmt::format("server has bind socket");
         return local_addresses;
     }
+    return std::nullopt;
 }
 
 bool TcpServer::addBindAddr(SockAddress::SharedPtr local_address) {
@@ -54,12 +55,11 @@ bool TcpServer::startServe() {
             std::make_shared<coroutine::Executor>([this, socket]()
             {
                 while (serving_) {
-                    std::optional<TcpConnection> connection = socket.
-                        accept();
-                    if (connection.has_value()) {
+                    std::shared_ptr<TcpConnection> connection = socket.accept();
+                    if (connection) {
                         balancer_->schedule(
                             std::make_shared<coroutine::Executor>(
-                                std::bind(on_connection_, connection.value())
+                                [this, connection] () { on_connection_(connection);}
                                 )
                             );
                     } else {

@@ -68,13 +68,13 @@ public:
      * @param _stack_size running stack size.
      * @param _callback  running callback, not null.
      */
-    Executor(ExectutorFunc _callback, size_t _stack_size = DefaultStackSize)
+    Executor(ExectutorFunc&& _callback, size_t _stack_size = DefaultStackSize)
         : is_call_back_type_{true},
           state_{State::Init},
           id_{executor_info::idGenerate()},
           stack_size_{_stack_size},
           stack_{nullptr},
-          callback_{_callback} {
+          callback_{std::move(_callback)} {
         assert(callback_ != nullptr);
         executor_info::createUpdateData();
     }

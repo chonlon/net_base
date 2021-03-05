@@ -84,8 +84,8 @@ static struct addrinfo* getAddrInfo(StringArg host,
     if ((::getaddrinfo(host.str, port.str, &hints, &result)) != 0) {
         throw std::invalid_argument(fmt::format(
             "resolve address failed, for host:{} port:{}, with {}(errno={})",
-            host,
-            port,
+            host.str,
+            port.str,
             strerror(errno),
             errno));
     }
@@ -96,13 +96,13 @@ static uint16_t getPortFromString(StringArg port) {
     uint16_t port_num = 0;
     if (strlen(port.str) > sizeof("65535") - 1)
         throw std::invalid_argument(
-            fmt::format("invalid port format, port str:{}", port));
+            fmt::format("invalid port format, port str:{}", port.str));
     for (int i = 0; port.str[i] != '\0'; ++i) {
         if (port.str[i] > '9' || port.str[i] < '0') {
             throw std::invalid_argument(
-                fmt::format("invalid port format, port str:{}", port));
+                fmt::format("invalid port format, port str:{}", port.str));
         }
-        port_num = port_num * 10 + port.str[i] - '0';
+        port_num = static_cast<uint16_t>(port_num * 10 + port.str[i] - '0');
     }
     return port_num;
 }
@@ -165,6 +165,7 @@ IPAddress::IPAddressUniquePtr IPAddress::create(StringArg host,
         return std::make_unique<IPV6Address>(
             *reinterpret_cast<sockaddr_in6*>(addr_info.info->ai_addr));
     }
+    return nullptr;
 }
 
 IPAddress::IPAddressUniquePtr IPAddress::create(StringArg host_and_port) {
@@ -197,8 +198,8 @@ void IPV4Address::setByHostAndPort(StringArg host_and_port) {
 }
 
 void IPV4Address::setByHostAndPort(StringArg host, StringArg port) {
-    int port_num = getPortFromString(port);
-    setByHostAndPort(host, port);
+    uint16_t port_num = getPortFromString(port);
+    setByHostAndPort(host, port_num);
 }
 
 void IPV4Address::setByHostAndPort(StringArg host, uint16_t port) {
@@ -277,8 +278,8 @@ void IPV6Address::setByHostAndPort(StringArg host_and_port) {
 }
 
 void IPV6Address::setByHostAndPort(StringArg host, StringArg port) {
-    int port_num = getPortFromString(port);
-    setByHostAndPort(host, port);
+    uint16_t port_num = getPortFromString(port);
+    setByHostAndPort(host, port_num);
 }
 
 void IPV6Address::setByHostAndPort(StringArg host, uint16_t port) {
@@ -297,7 +298,7 @@ const sockaddr* IPV6Address::getAddr() const {
 }
 
 sockaddr* IPV6Address::getAddrMutable() {
-    reinterpret_cast<sockaddr*>(&addr_);
+    return reinterpret_cast<sockaddr*>(&addr_);
 }
 
 String IPV6Address::toString() const {
@@ -351,7 +352,7 @@ const sockaddr* UnixAddress::getAddr() const {
 }
 
 sockaddr* UnixAddress::getAddrMutable() {
-    reinterpret_cast<sockaddr*>(&addr_);
+    return reinterpret_cast<sockaddr*>(&addr_);
 }
 
 String UnixAddress::toString() const {

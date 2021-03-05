@@ -6,7 +6,7 @@ RandomIOBalancer::RandomIOBalancer(size_t threads_count,
                                    bool use_current_thread) {
     managers_.reserve(threads_count);
     threads_.reserve(threads_count);
-    for (auto i = 0; i < threads_count; ++i) {
+    for (size_t i = 0; i < threads_count; ++i) {
         threads_.emplace_back([&]() {
             auto manager = IOManager::getThreadLocal();
             managers_.emplace_back(manager);
@@ -35,7 +35,7 @@ SequenceIOBalancer::SequenceIOBalancer(size_t threads_count,
                                        bool use_current_thread) {
     managers_.reserve(threads_count);
     threads_.reserve(threads_count);
-    for (auto i = 0; i < threads_count; ++i) {
+    for (size_t i = 0; i < threads_count; ++i) {
         threads_.emplace_back([&]() {
             auto manager = IOManager::getThreadLocal();
             managers_.emplace_back(manager);

@@ -60,7 +60,7 @@ public:
 class IPV4Address : public IPAddress
 {
 public:
-
+    IPV4Address() noexcept;
 
     IPV4Address(StringArg host_and_port);
 
@@ -87,7 +87,7 @@ public:
     LON_NODISCARD
     socklen_t getSockLen() const override;
 private:
-    IPV4Address() noexcept;
+    
 
     sockaddr_in addr_;
 };
@@ -95,6 +95,8 @@ private:
 class IPV6Address : public IPAddress
 {
 public:
+    IPV6Address() noexcept;
+
     IPV6Address(StringArg host_and_port);;
 
     IPV6Address(StringArg host, StringArg port);;
@@ -119,7 +121,7 @@ public:
     LON_NODISCARD
     socklen_t getSockLen() const override;
 private:
-    IPV6Address() noexcept;
+    
 
     sockaddr_in6 addr_;
 };
@@ -127,6 +129,7 @@ private:
 class UnixAddress : public SockAddress
 {
 public:
+    UnixAddress() noexcept;
 
     const sockaddr* getAddr() const override;
     sockaddr* getAddrMutable() override;
@@ -135,8 +138,7 @@ public:
 
     socklen_t getSockLen() const override;
 private:
-    UnixAddress() noexcept;
-
+    
     sockaddr_un addr_;
 };
 
