@@ -14,7 +14,7 @@ PrioBlancer::PrioBlancer(std::vector<uint8_t> prio_threads_count) {
     }
 }
 
-void PrioBlancer::schedule(coroutine::Executor::Ptr executor, std::any arg) {
+void PrioBlancer::schedule(coroutine::Executor::Ptr executor, const std::any& arg) {
     int prio;
     try {
         prio = std::any_cast<int>(arg);

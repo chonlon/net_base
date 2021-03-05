@@ -25,7 +25,7 @@ RandomIOBalancer::~RandomIOBalancer() {
 }
 
 void RandomIOBalancer::schedule(coroutine::Executor::Ptr executor,
-                                std::any arg) {
+                                const std::any& arg) {
     std::default_random_engine e;
     std::uniform_int_distribution<size_t> u(0, threads_.size() - 1);
     managers_[u(e)]->addRemoteTask(executor);
@@ -54,7 +54,7 @@ SequenceIOBalancer::~SequenceIOBalancer() {
 }
 
 void SequenceIOBalancer::schedule(coroutine::Executor::Ptr executor,
-                                  std::any arg) {
+                                  const std::any& arg) {
     static size_t count = 0;
     managers_[count++ % threads_.size()]->addRemoteTask(executor);
 }

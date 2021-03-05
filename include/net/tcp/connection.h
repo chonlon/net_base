@@ -35,8 +35,8 @@ namespace lon::net {
         ssize_t send(const void* buffer, size_t length, int flags = 0) const;
         ssize_t send(StringPiece message, int flags = 0) const;
         ssize_t send(iovec* buffers, size_t length, int flags = 0) const;
-        ssize_t recv(void* buffer, size_t length, int flags) const;
-        ssize_t recv(iovec* buffers, size_t length, int flags) const;
+        ssize_t recv(void* buffer, size_t length, int flags = 0) const;
+        ssize_t recv(iovec* buffers, size_t length, int flags = 0) const;
 
 	private:
 		bool connected_ = false;

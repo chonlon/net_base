@@ -18,7 +18,7 @@ public:
     /**
      * @param arg 应为int_type
      */
-    void schedule(coroutine::Executor::Ptr executor, std::any arg) override;
+    void schedule(coroutine::Executor::Ptr executor,const std::any& arg) override;
 
     ~PrioBlancer() override;
 

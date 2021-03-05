@@ -18,7 +18,7 @@ public:
 
     ~RandomIOBalancer() override;
 
-    void schedule(coroutine::Executor::Ptr executor, std::any arg) override;
+    void schedule(coroutine::Executor::Ptr executor,const std::any& arg) override;
 
 
 private:
@@ -41,7 +41,7 @@ public:
 
     ~SequenceIOBalancer() override;
 
-    void schedule(coroutine::Executor::Ptr executor, std::any arg) override;
+    void schedule(coroutine::Executor::Ptr executor,const std::any& arg) override;
 
 private:
     std::vector<std::shared_ptr<IOManager>> managers_;

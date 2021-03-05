@@ -7,7 +7,7 @@
 #include <iostream>
 #include <stdarg.h>
 
-bool G_hookEnabled = false;
+bool G_hookEnabled = true;
 bool G_hookInited  = false;
 
 void lon::io::setHookEnabled(bool enable) {

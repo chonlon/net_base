@@ -7,7 +7,7 @@
 #include <functional>
 
 namespace lon::net {
-auto G_logger = LogManager::getInstance()->getLogger("system");
+
 
 class TcpServer
     : public std::enable_shared_from_this<TcpServer>
@@ -18,11 +18,14 @@ public:
     std::function<void(std::shared_ptr<TcpConnection> connection)>;
 
     using SocketInitCallbackType = std::function<void(Socket& socket)>;
+    using Ptr = std::shared_ptr<TcpServer>;
 
 public:
     TcpServer(OnConnectionCallbackType _on_connection,
               std::unique_ptr<io::IOWorkBalancer> _balancer =
                   std::make_unique<io::SimpleIOBalancer>());
+
+    ~TcpServer();
 
     /**
      * @brief 设置listen socket.
@@ -77,6 +80,6 @@ private:
     
     bool serving_ = false;
     std::vector<Socket> listen_sockets_{};
-    std::unique_ptr<io::IOWorkBalancer> balancer_;
+    std::unique_ptr<io::IOWorkBalancer> balancer_ = nullptr;
 };
 } // namespace lon::net

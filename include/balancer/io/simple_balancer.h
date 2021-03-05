@@ -6,8 +6,21 @@ namespace lon::io {
 class SimpleIOBalancer : public IOWorkBalancer
 {
 public:
-    ~SimpleIOBalancer() override {}
-    void schedule(coroutine::Executor::Ptr executor, std::any arg) override {
+    SimpleIOBalancer() = default;
+    ~SimpleIOBalancer() override = default;
+
+
+    SimpleIOBalancer(const SimpleIOBalancer& _other) = delete;
+
+    SimpleIOBalancer(SimpleIOBalancer&& _other) noexcept = delete;
+
+    auto operator=(const SimpleIOBalancer& _other) -> SimpleIOBalancer& = delete
+    ;
+
+    auto operator=(SimpleIOBalancer&& _other) noexcept -> SimpleIOBalancer&
+    = delete;
+
+    void schedule(coroutine::Executor::Ptr executor, const std::any& arg) override {
         IOManager::getThreadLocal()->addExecutor(executor);
     }
 };

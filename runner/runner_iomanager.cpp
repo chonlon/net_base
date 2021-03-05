@@ -6,7 +6,7 @@
 using namespace lon;
 using namespace lon::io;
 using namespace std::chrono_literals;
-auto G_Logger      = LogManager::getInstance() -> getDefault();
+static auto G_Logger      = LogManager::getInstance() -> getDefault();
 constexpr int port = 22223;
 
 IOManager* io_manager;
