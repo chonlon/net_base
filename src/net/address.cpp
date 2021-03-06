@@ -108,17 +108,17 @@ static uint16_t getPortFromString(StringArg port) {
 }
 
 
-sa_family_t SockAddress::getFamily() const {
+sa_family_t SockAddress::getFamily() const noexcept {
     return getAddr()->sa_family;
 }
 
-sa_family_t SockAddress::isInetFamily() const {
+sa_family_t SockAddress::isInetFamily() const noexcept {
     return getFamily() == AF_INET ? true : getFamily() == AF_INET6 ? true : false;
 }
 
 
 bool SockAddress::operator<(const SockAddress& rhs) const {
-    socklen_t minlen = std::min(getSockLen(), rhs.getSockLen());
+    socklen_t minlen = std::min(getAddrLen(), rhs.getAddrLen());
     int result = memcmp(getAddr(), rhs.getAddr(), minlen);
     if (result < 0) {
         return true;
@@ -126,15 +126,15 @@ bool SockAddress::operator<(const SockAddress& rhs) const {
     else if (result > 0) {
         return false;
     }
-    else if (getSockLen() < rhs.getSockLen()) {
+    else if (getAddrLen() < rhs.getAddrLen()) {
         return true;
     }
     return false;
 }
 
 bool SockAddress::operator==(const SockAddress& rhs) const {
-    return getSockLen() == rhs.getSockLen()
-        && memcmp(getAddr(), rhs.getAddr(), getSockLen()) == 0;
+    return getAddrLen() == rhs.getAddrLen()
+        && memcmp(getAddr(), rhs.getAddr(), getAddrLen()) == 0;
 }
 
 bool SockAddress::operator!=(const SockAddress& rhs) const {
@@ -218,7 +218,7 @@ IPV4Address::IPV4Address() noexcept {
     bzero(&addr_, sizeof(sockaddr_in));
 }
 
-const sockaddr* IPV4Address::getAddr() const {
+const sockaddr* IPV4Address::getAddr() const noexcept {
     return reinterpret_cast<const sockaddr*>(&addr_);
 }
 
@@ -245,7 +245,7 @@ uint16_t IPV4Address::getPort() {
     return addr_.sin_port;
 }
 
-socklen_t IPV4Address::getSockLen() const {
+socklen_t IPV4Address::getAddrLen() const noexcept {
     return sizeof(addr_);
 }
 
@@ -293,7 +293,7 @@ void IPV6Address::setByHostAndPort(StringArg host, uint16_t port) {
     addr_.sin6_family = AF_INET6;
 }
 
-const sockaddr* IPV6Address::getAddr() const {
+const sockaddr* IPV6Address::getAddr() const noexcept {
     return reinterpret_cast<const sockaddr*>(&addr_);
 }
 
@@ -339,7 +339,7 @@ uint16_t IPV6Address::getPort() {
     return addr_.sin6_port;
 }
 
-socklen_t IPV6Address::getSockLen() const {
+socklen_t IPV6Address::getAddrLen() const noexcept {
     return sizeof(addr_);
 }
 
@@ -347,7 +347,7 @@ UnixAddress::UnixAddress() noexcept {
     bzero(&addr_, sizeof(sockaddr_un));
 }
 
-const sockaddr* UnixAddress::getAddr() const {
+const sockaddr* UnixAddress::getAddr() const noexcept {
     return reinterpret_cast<const sockaddr*>(&addr_);
 }
 
@@ -359,7 +359,7 @@ String UnixAddress::toString() const {
     return fmt::format("\\0{}",addr_.sun_path);
 }
 
-socklen_t UnixAddress::getSockLen() const {
+socklen_t UnixAddress::getAddrLen() const noexcept {
     return sizeof(addr_);
 }
 

@@ -47,9 +47,12 @@ void Executor::executorMainFunc() {
         t_cur_executor->callback_();
         // 协程中销毁回调.
         t_cur_executor->callback_ = ExectutorFunc();
-    } catch (...) {
-        t_cur_executor->state_ = State::Aborted;
-        throw;
+    } catch (std::exception& e) {
+        std::exception_ptr curr_exp = std::current_exception();
+        LON_LOG_ERROR(G_logger) << fmt::format("{} got an exception, what:{}", t_cur_executor->getId(), e.what());
+    }
+    catch (...) {
+        LON_LOG_ERROR(G_logger) << fmt::format("{} got an exception", t_cur_executor->getId());
     }
     
     t_cur_executor->terminal();

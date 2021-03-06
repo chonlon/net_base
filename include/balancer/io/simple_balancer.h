@@ -1,8 +1,11 @@
-#pragma once
+﻿#pragma once
 #include "balancer.h"
 #include "io/io_manager.h"
 
 namespace lon::io {
+/**
+ * @brief 直接转发给本线程IOManager的简单调度器.
+*/
 class SimpleIOBalancer : public IOWorkBalancer
 {
 public:

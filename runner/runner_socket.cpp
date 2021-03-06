@@ -45,7 +45,7 @@ void udp() {
     lon::io::IOManager::getThreadLocal()->addExecutor(
         std::make_shared<lon::coroutine::Executor>([=]() {  // recv
             int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
-            bind(fd, recv_addr->getAddr(), recv_addr->getSockLen());
+            bind(fd, recv_addr->getAddr(), recv_addr->getAddrLen());
             char buf[1024];
             lon::sockopt::recvFrom(fd, buf, 1024, send_addr.get(), 0);
             fmt::print("recv:{}\n", buf);
@@ -56,7 +56,7 @@ void udp() {
         std::make_shared<lon::coroutine::Executor>([=]() {  // send
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
-            bind(fd, send_addr->getAddr(), send_addr->getSockLen());
+            bind(fd, send_addr->getAddr(), send_addr->getAddrLen());
 
             lon::sockopt::sendTo(fd,
                                  fmt::format("your addr is:{}, current time:{}",

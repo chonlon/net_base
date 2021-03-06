@@ -6,6 +6,9 @@
 #include <random>
 
 namespace lon::io {
+/**
+ * @brief 优先级均衡器
+*/
 class PrioBlancer : public IOWorkBalancer
 {
 public:

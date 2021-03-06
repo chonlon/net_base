@@ -13,7 +13,8 @@ namespace lon::net {
 
 int Socket::bind(lon::net::SockAddress::SharedPtr local_addr) {
     local_address = local_addr;
-    return ::bind(fd_, local_addr->getAddr(), local_addr->getSockLen());
+    if (!local_addr) return -1;
+    return ::bind(fd_, local_addr->getAddr(), local_addr->getAddrLen());
 }
 
 std::unique_ptr<TcpConnection> Socket::accept() const {
@@ -33,7 +34,9 @@ int Socket::listen(int backlog) const {
 
 std::unique_ptr<TcpConnection> Socket::connect(lon::net::SockAddress::UniquePtr peer_addr) const {
     if(fd_ == -1) return nullptr;
-    ::connect(fd_, peer_addr->getAddr(), peer_addr->getSockLen());
+    if(!peer_addr) return nullptr;
+    int ret = ::connect(fd_, peer_addr->getAddr(), peer_addr->getAddrLen());
+    LON_ERROR_INVOKE_ASSERT(ret != -1, "connect", fmt::format("fd:{}, err:{}(with {}), peer addr:{}", fd_, std::strerror(errno), errno, peer_addr->toString()), G_logger);
     return std::make_unique<TcpConnection>(Socket(*this), std::move(peer_addr));
 }
 

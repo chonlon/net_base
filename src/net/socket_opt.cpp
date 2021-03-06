@@ -9,7 +9,7 @@ static auto G_logger = lon::LogManager::getInstance()->getLogger("system");
 namespace lon::sockopt {
 
 int connect(int sock_fd, const lon::net::SockAddress& sock_address) {
-    return ::connect(sock_fd, sock_address.getAddr(), sock_address.getSockLen());
+    return ::connect(sock_fd, sock_address.getAddr(), sock_address.getAddrLen());
 }
 
 std::pair<lon::net::SockAddress::UniquePtr, int>  accept(int sock_fd) {
@@ -35,7 +35,7 @@ std::pair<lon::net::SockAddress::UniquePtr, int>  accept(int sock_fd, sa_family_
     default:
         throw std::invalid_argument(fmt::format("invalid family:{}", family));
     }
-    socklen_t len = result->getSockLen();
+    socklen_t len = result->getAddrLen();
     int ret = ::accept(sock_fd, result->getAddrMutable(), &len);
     LON_ERROR_INVOKE_ASSERT(ret !=-1, accept, fmt::format("sockfd = {}", sock_fd),G_logger);
     return {std::move(result), ret};
@@ -65,7 +65,7 @@ void setReusePort(int sock_fd, bool on) {
     int optval = on ? 1 : 0;
     int ret = ::setsockopt(sock_fd, SOL_SOCKET, SO_REUSEPORT,
         &optval, static_cast<socklen_t>(sizeof optval));
-    LON_ERROR_INVOKE_ASSERT(ret == 0 && on, setsockopt, "reuse port failed",G_logger);
+    LON_ERROR_INVOKE_ASSERT(ret == 0 && on, setsockopt, "reuse port failed", G_logger);
 #else
     if (on)
     {
@@ -97,7 +97,7 @@ ssize_t sendTo(int sock_fd,
            const void* buffer,
            size_t length,
            const lon::net::SockAddress* peer_addr,int flags) {
-    return ::sendto(sock_fd, buffer, length, flags,peer_addr->getAddr(), peer_addr->getSockLen());
+    return ::sendto(sock_fd, buffer, length, flags,peer_addr->getAddr(), peer_addr->getAddrLen());
 }
 
 ssize_t sendTo(int sock_fd, StringPiece message, const lon::net::SockAddress* peer_addr,int flags) {
@@ -113,7 +113,7 @@ ssize_t sendTo(int sock_fd,
     msg.msg_iov = static_cast<iovec*>(buffers);
     msg.msg_iovlen = length;
     msg.msg_name = reinterpret_cast<void*>(peer_addr->getAddrMutable());
-    msg.msg_namelen = peer_addr->getSockLen();
+    msg.msg_namelen = peer_addr->getAddrLen();
     return ::sendmsg(sock_fd, &msg, flags);
 }
 
@@ -130,7 +130,7 @@ ssize_t recvFrom(int sock_fd,
              void* buffer,
              size_t length,
              lon::net::SockAddress* peer_addr, int flags) {
-    socklen_t len = peer_addr->getSockLen();
+    socklen_t len = peer_addr->getAddrLen();
     return ::recvfrom(sock_fd, buffer, length, flags, peer_addr->getAddrMutable(), &len);
 }
 
@@ -143,7 +143,7 @@ ssize_t recvFrom(int sock_fd,
     msg.msg_iov = static_cast<iovec*>(buffers);
     msg.msg_iovlen = length;
     msg.msg_name = peer_addr->getAddrMutable();
-    msg.msg_namelen = peer_addr->getSockLen();
+    msg.msg_namelen = peer_addr->getAddrLen();
     return ::recvmsg(sock_fd, &msg, flags);
 }
 

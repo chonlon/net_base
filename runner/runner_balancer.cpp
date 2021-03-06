@@ -2,6 +2,7 @@
 #include "base/print_helper.h"
 #include "balancer/io/avg_balancer.h"
 #include "balancer/io/prio_balancer.h"
+#include "io/fd_manager.h"
 #include "io/hook.h"
 
 using namespace lon::io;
@@ -10,8 +11,8 @@ using namespace lon::net;
 constexpr int loop_time = 8;
 constexpr int server_count = 3;
 
-std::array<uint16_t, server_count> server_ports{22225, 22226, 22227};
-std::array<const char*, server_count> server_name{"1", "2", "3"};
+static std::array<uint16_t, server_count> server_ports{22225, 22226, 22227};
+static std::array<const char*, server_count> server_name{"1", "2", "3"};
 
 void runAvg() {
     {
