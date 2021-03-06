@@ -11,8 +11,16 @@ TcpServer::TcpServer(OnConnectionCallbackType _on_connection,
 }
 
 TcpServer::~TcpServer() {
-    if(serving_) { LON_LOG_ERROR(G_logger) << "tcp server is being destroy while serving";}
-    else { LON_LOG_INFO(G_logger) << "notion: tcp server destroying"; }
+    if(serving_) {
+        LON_LOG_ERROR(G_logger) << "tcp server is being destroy while serving";
+        stopServe();
+    }
+    else {
+        LON_LOG_INFO(G_logger) << "notion: tcp server destroying";
+        for (auto& socket : listen_sockets_) {
+            socket.close();
+        }
+    }
 }
 
 auto TcpServer::setSocketIniter(SocketInitCallbackType _socket_initer) -> void {

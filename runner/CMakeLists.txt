@@ -8,6 +8,7 @@
     runner_hook.cpp
     runner_tcp.cpp
     runner_socket.cpp
+    runner_balancer.cpp
 )
 
 configure_file("../bin/conf/test.yml" "${EXECUTABLE_OUTPUT_PATH}/conf/test.yml" COPYONLY)
