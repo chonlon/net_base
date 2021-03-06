@@ -8,7 +8,7 @@ namespace lon::io {
 /**
  * @brief 随机平均分配均衡器
  */
-class RandomIOBalancer : IOWorkBalancer
+class RandomIOBalancer : public IOWorkBalancer
 {
 public:
     RandomIOBalancer(
@@ -31,7 +31,7 @@ private:
 /**
  * @brief 顺序平均分配均衡器
  */
-class SequenceIOBalancer : IOWorkBalancer
+class SequenceIOBalancer : public IOWorkBalancer
 {
 public:
     SequenceIOBalancer(

@@ -1,5 +1,5 @@
 #include "balancer/io/avg_balancer.h"
-
+#include "base/random.h"
 namespace lon::io {
 
 RandomIOBalancer::RandomIOBalancer(size_t threads_count,
@@ -26,9 +26,8 @@ RandomIOBalancer::~RandomIOBalancer() {
 
 void RandomIOBalancer::schedule(coroutine::Executor::Ptr executor,
                                 const std::any& arg) {
-    std::default_random_engine e;
-    std::uniform_int_distribution<size_t> u(0, threads_.size() - 1);
-    managers_[u(e)]->addRemoteTask(executor);
+
+    managers_[mt19937RandomGen<size_t>(0, threads_.size() -1)]->addRemoteTask(executor);
 }
 
 SequenceIOBalancer::SequenceIOBalancer(size_t threads_count,

@@ -16,7 +16,7 @@ public:
     PrioBlancer(std::vector<uint8_t> prio_threads_count);
 
     /**
-     * @param arg 应为int_type
+     * @param arg 应为int
      */
     void schedule(coroutine::Executor::Ptr executor,const std::any& arg) override;
 
