@@ -6,6 +6,7 @@ set(
 	log_test.cpp
 	config_test.cpp
 	coroutine_test.cpp
+	scheduler_test.cpp
 )
 
 configure_file("../bin/conf/test.yml" "${EXECUTABLE_OUTPUT_PATH}/conf/test.yml" COPYONLY)
