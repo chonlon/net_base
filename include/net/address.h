@@ -15,6 +15,8 @@ public:
     using UniquePtr = std::unique_ptr<SockAddress>;
     using SharedPtr = std::shared_ptr<SockAddress>;
 
+    virtual ~SockAddress() = default;
+
     LON_NODISCARD
     virtual socklen_t getAddrLen() const noexcept = 0;
 
@@ -51,6 +53,8 @@ class IPAddress : public SockAddress
 {
 public:
     using IPAddressUniquePtr = std::unique_ptr<IPAddress>;
+
+    ~IPAddress() override = default;
 
     static IPAddressUniquePtr create(StringArg host, uint16_t port);
     static IPAddressUniquePtr create(StringArg host, StringArg port);

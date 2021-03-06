@@ -93,7 +93,7 @@ static struct addrinfo* getAddrInfo(StringArg host,
 }
 
 static uint16_t getPortFromString(StringArg port) {
-    uint16_t port_num = 0;
+    int port_num = 0;
     if (strlen(port.str) > sizeof("65535") - 1)
         throw std::invalid_argument(
             fmt::format("invalid port format, port str:{}", port.str));
@@ -102,9 +102,12 @@ static uint16_t getPortFromString(StringArg port) {
             throw std::invalid_argument(
                 fmt::format("invalid port format, port str:{}", port.str));
         }
-        port_num = static_cast<uint16_t>(port_num * 10 + port.str[i] - '0');
+        port_num = static_cast<int>(port_num * 10 + port.str[i] - '0');
+        if(port_num >= static_cast<int>(static_cast<uint16_t>(-1) + 1)) {
+            throw std::invalid_argument(fmt::format("invalid port format, out of range,port str:{}", port.str));
+        }
     }
-    return port_num;
+    return static_cast<uint16_t>(port_num);
 }
 
 
@@ -238,11 +241,11 @@ String IPV4Address::getAddressStr() const {
 }
 
 void IPV4Address::setPort(uint16_t port) {
-    addr_.sin_port = port;
+    addr_.sin_port = ::htons(port);
 }
 
 uint16_t IPV4Address::getPort() {
-    return addr_.sin_port;
+    return ::ntohs(addr_.sin_port);
 }
 
 socklen_t IPV4Address::getAddrLen() const noexcept {
@@ -302,8 +305,13 @@ sockaddr* IPV6Address::getAddrMutable() {
 }
 
 String IPV6Address::toString() const {
+    return fmt::format("{}:{}", getAddressStr(), ::ntohs(addr_.sin6_port));
+}
+
+
+String IPV6Address::getAddressStr() const {
     char buffer[INET6_ADDRSTRLEN + IFNAMSIZ + 1];
-    if(!inet_ntop(AF_INET6, addr_.sin6_addr.s6_addr , buffer, INET_ADDRSTRLEN)) {
+    if (!inet_ntop(AF_INET6, addr_.sin6_addr.s6_addr, buffer, INET6_ADDRSTRLEN)) {
         return fmt::format("invalid ipv6 address with hex:{}", toHex(addr_.sin6_addr.s6_addr, sizeof(addr_.sin6_addr.s6_addr)));
     }
     if (addr_.sin6_scope_id != 0) {
@@ -322,21 +330,12 @@ String IPV6Address::toString() const {
     return String(buffer);
 }
 
-
-String IPV6Address::getAddressStr() const {
-    char buffer[INET6_ADDRSTRLEN + 1];
-    if (!inet_ntop(AF_INET6, addr_.sin6_addr.s6_addr, buffer, INET_ADDRSTRLEN)) {
-        return fmt::format("invalid ipv6 address with hex:{}", toHex(addr_.sin6_addr.s6_addr, sizeof(addr_.sin6_addr.s6_addr)));
-    }
-    return String(buffer);
-}
-
 void IPV6Address::setPort(uint16_t port) {
-    addr_.sin6_port = port;
+    addr_.sin6_port = ::htons(port);
 }
 
 uint16_t IPV6Address::getPort() {
-    return addr_.sin6_port;
+    return ::ntohs(addr_.sin6_port);
 }
 
 socklen_t IPV6Address::getAddrLen() const noexcept {
