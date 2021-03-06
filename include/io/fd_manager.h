@@ -4,6 +4,8 @@
 #include "base/typedef.h"
 #include <cstdlib>
 #include <cstring>
+#include <vector>
+
 namespace lon::io {
 
 struct FdContext
@@ -25,21 +27,24 @@ struct FdContext
 class _FdManager
 {
 public:
-    _FdManager() : context_{nullptr}, len_{0} {
-        constexpr int default_size = 10;
-        context_ = new FdContext[default_size];
-        len_ = default_size;
-    }
+    _FdManager() {}
 
     ~_FdManager() {
-        delete[] context_;
+        for(auto context : contexts_) {
+            if(!!context) {
+                delete context;
+            }
+        }
     }
 
     void setContext(int fd, FdContext context) {
         WriteLocker<RWMutex> lock(mutex_);
-        if (fd >= len_)
-            allocToNewSize();
-        context_[fd] = context;
+        const int len = static_cast<int>(contexts_.size());
+        constexpr double resizeFactor = 1.5;
+        if(fd >= len) {
+            contexts_.resize(static_cast<size_t>(fd * resizeFactor), nullptr);
+        }
+        contexts_[fd] = new FdContext(context);
     }
 
     /**
@@ -48,39 +53,34 @@ public:
     LON_NODISCARD
     FdContext* getContext(int fd) const {
         ReadLocker<RWMutex> locker(mutex_);
-        if (fd < len_ && context_[fd].is_initialized) {
-            return &context_[fd];
+        const int len = static_cast<int>(contexts_.size());
+        if (fd < len && !!contexts_[fd]) {
+            return contexts_[fd];
         }
         return nullptr;
     }
 
     bool hasFd(int fd) {
         ReadLocker<RWMutex> locker(mutex_);
-        if (fd < len_ && context_[fd].is_initialized)
+        const int len = static_cast<int>(contexts_.size());
+        if (fd < len && !!contexts_[fd])
             return true;
         return false;
     }
 
     void delContext(int fd) {
         WriteLocker<RWMutex> lock(mutex_);
-        if (fd < len_ && context_[fd].is_initialized) {
-            context_[fd].is_initialized = false;
+        const int len = static_cast<int>(contexts_.size());
+        if (fd < len && !!contexts_[fd]) {
+            delete contexts_[fd];
+            contexts_[fd] = nullptr;
         }
     }
 
 private:
-    void allocToNewSize() {
-        constexpr double factor = 1.5;
+    //如果确定socket在fd中不是稠密分布的, 那么使用unordered_map会更好.
+    std::vector<FdContext*> contexts_;
 
-        FdContext* dst = new FdContext[static_cast<int>(len_ * factor)];
-        std::memcpy(dst, context_, len_ * sizeof(FdContext));
-        delete[] dst;
-        context_ = dst;
-        len_     = static_cast<int>(len_ * factor);
-    }
-
-    FdContext* context_;
-    int len_;
     mutable RWMutex mutex_;
 };
 
