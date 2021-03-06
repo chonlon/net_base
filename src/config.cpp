@@ -1,5 +1,5 @@
 #include "config.h"
-#include "base/string_piece.h"
+#include "base/lstring.h"
 #include <set>
 #include <yaml-cpp/node/node.h>
 

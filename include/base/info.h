@@ -2,7 +2,7 @@
 
 #include "typedef.h"
 #include "macro.h"
-#include "string_piece.h"
+#include "lstring.h"
 
 #include <sys/time.h>
 

@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "string_piece.h"
+#include "lstring.h"
 
 namespace lon
 {

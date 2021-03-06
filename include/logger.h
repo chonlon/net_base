@@ -1,7 +1,7 @@
 #pragma once
 
 #include "base/info.h"
-#include "base/string_piece.h"
+#include "base/lstring.h"
 #include "base/typedef.h"
 #include "logging/logger_flusher.h"
 #include <algorithm>
