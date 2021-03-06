@@ -25,6 +25,7 @@ void runServer() {
     });
     server->bind(std::make_shared<IPV4Address>("127.0.0.1", 22225));
     server->startServe();
+    // run nc localhost 22225.
 }
 
 void runServerBinds() {

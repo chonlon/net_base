@@ -93,6 +93,6 @@ void Scheduler::threadScheduleFunc() {
         }
 
     }
-
+    scheduler_executor_->mainYield();
 }
 }
