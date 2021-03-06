@@ -14,7 +14,7 @@ TEST(CoroutineTest, sequence) {
         int sequence = 0;
         auto scheduler = lon::coroutine::Scheduler::getThreadLocal();
 
-    #define SEQ_XX(seq_expect) \
+    #define SEQ_XX(seq_expect)  \  
         scheduler->addExecutor(std::make_shared<lon::coroutine::Executor>([&]() \
             { \
                 EXPECT_EQ(sequence++, seq_expect); \

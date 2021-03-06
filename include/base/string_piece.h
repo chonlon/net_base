@@ -2,7 +2,9 @@
 
 #include <string>
 #include <string_view>
+#include <sstream>
 #include <vector>
+#include "print_helper.h"
 #include "typedef.h"
 
 namespace lon {
@@ -20,6 +22,23 @@ inline StringPiece toStringPiece(std::string::iterator begin,
  */
 std::vector<StringPiece> splitStringPiece(StringPiece str_v,
                                           StringPiece split_world);
+
+
+template <typename ContainerType,
+    typename Type = typename ContainerType::value_type,
+    typename = std::enable_if_t<lon::IsCoutable<Type>::value>>
+    String join(StringPiece _break,const ContainerType& container) {
+    if(container.empty()) return "";
+
+    using StringStream = std::stringstream;
+    StringStream ss;
+    for(size_t pos = 0; pos < container.size() - 1; ++pos) {
+        ss << container[pos] << _break;
+    }
+    ss<<container.back();
+    return ss.str();
+}
+
 
 /**
  * \brief 简单字符串参数.
