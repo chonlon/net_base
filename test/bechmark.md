@@ -14,3 +14,23 @@
   - **simple log without formatters** 和 **log  without formatters and flusher** 速度反而更低原因应该是长度不一致(去除formatter以后长度变短).
   - **log  without formatters and flusher** 中速度和**simple log**中相当, **log  without formatters and flusher** 去除了formatters和flushers, 说明瓶颈不在文件读写上, 反而在std::stringstream上.
 
+### ttcp speed
+
+- ./ttcp_speed.cpp
+
+- 81920 次, buffer size 1004
+
+- run on lo interface
+
+- 单线程
+
+  
+
+| name           | 1      | 2      | 3      | 4      | avg      |
+| -------------- | ------ | ------ | ------ | ------ | -------- |
+| sync sysapi    | 12.017 | 12.027 | 11.849 | 11.870 | 11.94075 |
+| async ucontext | 11.054 | 11.156 | 11.444 | 11.185 | 11.20975 |
+
+*注: 单位Mib/s*
+
+- 使用ucontext协程+epoll的性能约为阻塞的性能的 93.878%.

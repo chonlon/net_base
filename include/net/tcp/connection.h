@@ -20,6 +20,8 @@ namespace lon::net {
               peer_addr_{std::move(_peer_addr)} {
         }
 
+        ~TcpConnection() = default;
+
 		LON_NODISCARD
 	    bool connected() const { return connected_; }
 

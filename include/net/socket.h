@@ -15,6 +15,8 @@ namespace lon::net {
             : fd_{_fd} {
         }
 
+        ~Socket() = default;
+
         Socket(const Socket& _other) = default;
         Socket(Socket&& _other) noexcept = default;
         auto operator=(const Socket& _other) -> Socket& = default;
