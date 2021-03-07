@@ -3,6 +3,8 @@
 
 #include "base/epoll_helper.h"
 #include "coroutine/executor.h"
+#include "io/hook.h"
+
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -182,6 +184,8 @@ void IOManager::blockPending() {
     for (int i = 0; i < ret; ++i) {
         const epoll_event ep_event = epoll_events[i];
         if (ep_event.data.fd == wakeup_pipe_fd_[0]) {
+            uint8_t dummy[256];
+            while (read(wakeup_pipe_fd_[0], dummy, sizeof(dummy)) > 0);
             continue;
         } else {
             {// 删除事件.
