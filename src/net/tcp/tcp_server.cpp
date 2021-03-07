@@ -74,11 +74,7 @@ bool TcpServer::startServe() {
                 while (serving_) {
                     std::shared_ptr<TcpConnection> connection = socket.accept();
                     if (connection) {
-                       
-                        balancer_->schedule(std::make_shared<coroutine::Executor>(
-                            [on_connection = this->on_connection_, connection]() {
-                                on_connection(connection);
-                            }), 0);
+                        onAccept(std::move(connection));
                     } else {
                         LON_LOG_WARN(
                             LogManager::getInstance()->getLogger("system"))
@@ -101,9 +97,9 @@ bool TcpServer::stopServe() {
     if (!serving_)
         return true;
     serving_  = false;
-    auto self = shared_from_this();
+    auto hold_this = shared_from_this();
     io::IOManager::getThreadLocal()->addExecutor(
-        std::make_shared<coroutine::Executor>([this, self]() {
+        std::make_shared<coroutine::Executor>([this, hold_this]() {
             for (auto& socket : listen_sockets_) {
                 socket.shutdownWrite();
                 socket.stopRead();

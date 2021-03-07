@@ -2,9 +2,7 @@
 #include "net/socket_opt.h"
 #include "net/tcp/connection.h"
 #include <string>
-#include <unordered_set>
 #include <gtest/gtest.h>
-#include "config/yaml_convert_def.h"
 #include <fmt/ranges.h>
 #include <netinet/tcp.h>
 

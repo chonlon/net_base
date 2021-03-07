@@ -18,6 +18,7 @@ public:
     std::function<void(std::shared_ptr<TcpConnection> connection)>;
 
     using SocketInitCallbackType = std::function<void(Socket& socket)>;
+
     using Ptr = std::shared_ptr<TcpServer>;
 
 public:
@@ -32,6 +33,7 @@ public:
      * @param _socket_initer listen socket 初始化器.
     */
     auto setSocketIniter(SocketInitCallbackType _socket_initer) -> void;
+
 
     /**
      * @brief 绑定地址到tcp server.
@@ -72,12 +74,24 @@ public:
         return serving_;
     }
 
+    /**
+     * @brief accept成功时分配动作;
+     *  默认动作是交给均衡器来调度, 对于优先级调度器需要的优先级参数需要动态配置, 所以默认动作对于优先级均衡器无效.
+    */
+    virtual void onAccept(std::shared_ptr<TcpConnection> connection) {
+        balancer_->schedule(std::make_shared<coroutine::Executor>(
+            [on_connection = this->on_connection_, connection]() {
+                on_connection(connection);
+        }), 0);
+    }
+
 private:
     bool bindOne(SockAddress::SharedPtr local_address);
 
     OnConnectionCallbackType on_connection_ = nullptr;
     SocketInitCallbackType socket_initer_ = nullptr;
-    
+
+protected:
     bool serving_ = false;
     std::vector<Socket> listen_sockets_{};
     std::unique_ptr<io::IOWorkBalancer> balancer_ = nullptr;
