@@ -65,7 +65,7 @@ void setReusePort(int sock_fd, bool on) {
     int optval = on ? 1 : 0;
     int ret = ::setsockopt(sock_fd, SOL_SOCKET, SO_REUSEPORT,
         &optval, static_cast<socklen_t>(sizeof optval));
-    LON_ERROR_INVOKE_ASSERT(ret == 0 && on, setsockopt, "reuse port failed", G_logger);
+    LON_ERROR_INVOKE_ASSERT(ret == 0, setsockopt, "reuse port failed", G_logger);
 #else
     if (on)
     {
