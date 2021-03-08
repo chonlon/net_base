@@ -11,8 +11,14 @@ namespace lon {
         ~BaseMainConfig() = delete;
 
         static lon::JsonConfig* getInstance() {
-            static lon::JsonConfig instance("conf/main.json");
-            return &instance;
+            try {
+                static lon::JsonConfig instance("conf/main.json");
+                return &instance;
+            } catch (std::exception& e) {
+                fmt::print("error: main config file load failed!!!; {}\n", e.what());
+                static lon::JsonConfig instance;
+                return &instance;
+            }
         }
     };
 

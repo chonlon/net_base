@@ -48,6 +48,7 @@
                 config.get<decltype(container)>("system.str_int_vec_umap")); \
         }
 
+//TODO config file in ctest(different dir) load fail.
 
 TEST(ConfigTest, YamlConfigFileTest) {
     lon::YamlConfig config("conf/test.yml");

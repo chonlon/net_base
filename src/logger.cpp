@@ -16,10 +16,7 @@ namespace lon {
 Level Logger::levelFromString(StringPiece str) noexcept {
     std::string str_upper;
     std::transform(
-        str.begin(),
-        str.end(),
-        std::back_inserter(str_upper),
-        ::toupper);
+        str.begin(), str.end(), std::back_inserter(str_upper), ::toupper);
 
 #define LON_XX(name)          \
     if (str_upper == #name) { \
@@ -38,10 +35,7 @@ Level Logger::levelFromString(StringPiece str) noexcept {
 
 
 LogWrapper::LogWrapper(std::shared_ptr<Logger> _logger_ptr, LogEvent _event)
-    : stream{},
-      logger_ptr{_logger_ptr},
-      event{std::move(_event)} {
-}
+    : stream{}, logger_ptr{_logger_ptr}, event{std::move(_event)} {}
 
 LogWrapper::~LogWrapper() {
     event.content = stream.str();
@@ -64,8 +58,7 @@ void Logger::log(LogEvent* event) noexcept {
     }
 }
 
-void Logger::registerUpdateFlusher() const {
-}
+void Logger::registerUpdateFlusher() const {}
 
 void Logger::setFormatters(const String& formatter_pattern) {
     if (!formatters_.empty())
@@ -99,7 +92,7 @@ void Logger::setFormatters(const String& formatter_pattern) {
             auto formatter = LogFormatterFactory::getFormatter(key);
             if (formatter == nullptr) {
                 StringLogFormatter string_formatter("<<error_format%" + str +
-                    ">>");
+                                                    ">>");
                 addOneFormatter(std::move(string_formatter));
             } else {
                 addOneFormatter(std::move(formatter));
@@ -116,39 +109,35 @@ _LogManager::_LogManager() {
 void _LogManager::initDefaultLogger() {
     auto ptr = std::make_shared<Logger>("root");
     ptr->setFormatters(
-        "%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
+        "%d{%Y-%m-%d %H:%M:%S}%T%t%T%E%T[%p]%T[%c]%T<%f:%l>%T%m%n");
     ptr->addOneFlusher(log::FlusherManager::getInstance()->getLogFlusher(
-        "ProtectedStdoutFlusher",
-        ""));
+        "ProtectedStdoutFlusher", ""));
     ptr->addOneFlusher(log::FlusherManager::getInstance()->getLogFlusher(
-        "ProtectedFileFlusher",
-        "./logs/%H-root-%P.log"));
+        "ProtectedFileFlusher", "./logs/%H-root-%P.log"));
     ptr->setLevel(Level::DEBUG);
     default_logger_ = ptr;
     loggers_.insert({"root", ptr});
-
+    loggers_.insert({"system", ptr});
 }
 
 void _LogManager::initLoggerFromConfig() {
-    auto log_data =
-        BaseMainConfig::getInstance()->get<std::vector<detail::LogConfigData>>(
-            "logs");
+    auto log_data = BaseMainConfig::getInstance()
+                        ->getIfExists<std::vector<detail::LogConfigData>>(
+                            "logs", std::vector<detail::LogConfigData>{});
     for (auto& item : log_data) {
         auto ptr = std::make_shared<Logger>(item.name);
         ptr->setFormatters(item.formatter);
         for (auto flusher : item.flushers) {
-            if (auto flusher_ptr = lon::log::FlusherManager::getInstance()->
-                getLogFlusher(
-                    flusher.type,
-                    flusher.name_pattern); flusher_ptr) {
+            if (auto flusher_ptr =
+                    lon::log::FlusherManager::getInstance()->getLogFlusher(
+                        flusher.type, flusher.name_pattern);
+                flusher_ptr) {
                 ptr->addOneFlusher(std::move(flusher_ptr));
             } else {
                 std::cerr << "flusher type error, type name:" << flusher.type;
             }
-
         }
-        
-        loggers_.insert({item.name, ptr});
+        loggers_[item.name] = ptr;
         if (item.name == "root") {
             // root logger in config will replace
             // default root logger.
@@ -157,76 +146,4 @@ void _LogManager::initLoggerFromConfig() {
     }
 }
 
-
-// Logger::ptr LogFactory::default_logger_ = nullptr;
-// std::unordered_map<String, Logger::ptr> LogFactory::loggers_{};
-namespace detail {
-
-// void initDefaultLogger(_LogManager* manager) {
-//     auto ptr = std::make_shared<Logger>("root");
-//     ptr->setFormatters(
-//         "%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n");
-//     ptr->addOneFlusher(log::FlusherManager::getInstance()->getLogFlusher(
-//         "ProtectedStdoutFlusher",
-//         ""));
-//     ptr->addOneFlusher(log::FlusherManager::getInstance()->getLogFlusher(
-//         "ProtectedFileFlusher",
-//         "./logs/%H-root-%P.log"));
-//     ptr->setLevel(Level::DEBUG);
-//     manager->default_logger_ = ptr;
-//     manager->loggers_.insert({"root", ptr});
-
-//     // LogManager::getInstance()->default_logger_ = ptr;
-//     // LogManager::getInstance()->loggers_.insert({"root", ptr});
-//     // LogFactory::default_logger_ = ptr;
-//     //P
-//     // LogFactory::loggers_.insert({ "root", ptr });
-// }
-
-// void initLoggerFromConfig(_LogManager* manager) {
-//     auto log_data =
-//         BaseMainConfig::getInstance()->get<std::vector<detail::LogConfigData>>(
-//             "logs");
-//     for (auto& item : log_data) {
-//         auto ptr = std::make_shared<Logger>(item.name);
-//         ptr->setFormatters(item.formatter);
-//         for (auto flusher : item.flushers) {
-//             if (auto flusher_ptr = lon::log::FlusherManager::getInstance()->
-//                 getLogFlusher(
-//                     flusher.type,
-//                     flusher.name_pattern); flusher_ptr) {
-//                 ptr->addOneFlusher(std::move(flusher_ptr));
-//             } else {
-//                 std::cerr << "flusher type error, type name:" << flusher.type;
-//             }
-
-//         }
-//         // LogManager::getInstance()->loggers_.insert({item.name, ptr});
-//         // if (item.name == "root") {
-//         //     // root logger in config will replace
-//         //     // default root logger.
-//         //     LogManager::getInstance()->default_logger_ = ptr;
-//         // }
-//         manager->loggers_.insert({item.name, ptr});
-//         if (item.name == "root") {
-//             // root logger in config will replace
-//             // default root logger.
-//             manager->default_logger_ = ptr;
-//         }
-//     }
-// }
-
-
-// struct ___LoggerIniter
-// {
-//     ___LoggerIniter() {
-//         initDefaultLogger();
-//         initLoggerFromConfig();
-//     }
-// };
-
-// ___LoggerIniter initer;
-} // namespace detail
-
-
-} // namespace lon
+}  // namespace lon

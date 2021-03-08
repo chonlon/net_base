@@ -33,7 +33,8 @@ public:
 
     /**
      * \brief 如果是同步输出, flush可能阻塞在write文件上, 如果是异步输出,
-     * flush可能出现锁争夺, 对于超高频率写日志情况应使用异步方式 \param str
+     * flush可能出现锁争夺, 对于超高频率写日志情况应使用异步方式
+     * \param str
      * 输出至log文件
      */
     virtual void flush(const String& str) = 0;

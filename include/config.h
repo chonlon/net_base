@@ -56,6 +56,8 @@ public:
         i >> json_object_;
     }
 
+    JsonConfig() = default;
+
     /**
      * \brief 获取指定key的值
      * \tparam T return type
@@ -113,7 +115,7 @@ private:
         json_object_ = json::parse(str);
     }
 
-    json json_object_;
+    json json_object_{};
 };
 
 class YamlConfig : public ConfigBase
