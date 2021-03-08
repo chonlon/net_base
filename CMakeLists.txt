@@ -63,6 +63,7 @@ set(
     NET_BASE_SRC
     src/logger.cpp
     src/config.cpp
+    src/initer.cpp
     src/base/info.cpp
     src/base/string_piece.cpp
     src/logging/logger_filename.cpp
@@ -106,6 +107,7 @@ if(EnableBoostContext)
 endif()
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake/cmake_defination.h.in ${CMAKE_CURRENT_LIST_DIR}/include/cmake_defination.h)
+
 
 if(EnableStaticLibBuild)
     add_library(net_base_static STATIC)

@@ -54,14 +54,6 @@ void lon::io::hook_init() {
     G_hookInited = true;
 }
 
-struct ___HookIniter
-{
-    ___HookIniter() {
-        lon::io::hook_init();
-    }
-};
-
-
 extern "C" {
 #define FUNC_INIT(name) name##_fun name##_sys = nullptr;
 HOOK_FUN(FUNC_INIT)
