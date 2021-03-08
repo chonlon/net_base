@@ -23,6 +23,7 @@ set(
 	file_write_speed.cpp
 	log_speed.cpp
 	ttcp_speed.cpp
+	qps.cpp
 )
 
 AddExeFromFilesWithLib("net_base" "net_base" "./" ${BENCHMARKS})
