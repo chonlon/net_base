@@ -1,0 +1,7 @@
+#pragma once
+
+#define COROUTINE_UCONTEXT 0
+#define COROUTINE_FCONTEXT 1
+
+#cmakedefine LON_CONTEXT_TYPE @LON_CONTEXT_TYPE@
+

@@ -39,8 +39,28 @@ void executor_info::createUpdateData() noexcept {
 void executor_info::destroyUpdateData() noexcept {
     --executor_count;
 }
-
+#if LON_CONTEXT_TYPE == COROUTINE_UCONTEXT
 void Executor::executorMainFunc() {
+#elif  LON_CONTEXT_TYPE == COROUTINE_FCONTEXT
+
+void Executor::fixStackUnwinding() {
+    if (kIsArchAmd64 && kIsLinux) {
+        // Extract RBP and RIP from main context to stitch main context stack and
+        // fiber stack.
+        auto stackBase = reinterpret_cast<void**>(stack_ + stack_size_);
+        auto mainContext = reinterpret_cast<void**>(context_);
+        stackBase[-2] = mainContext[6];
+        stackBase[-1] = mainContext[7];
+    }
+}
+
+void Executor::executorMainFunc(boost::context::detail::transfer_t transfer) {
+    t_cur_executor->fixStackUnwinding();
+    //TODO 有把src的指针以data传入再赋值更好的实现方式吗
+    // 设置swapcontext的src的fcontext.
+    static_cast<Executor*>(transfer.data)->context_ = transfer.fctx;
+    
+#endif
     try {
         assert(t_cur_executor);
         assert(t_cur_executor->callback_);
@@ -56,6 +76,7 @@ void Executor::executorMainFunc() {
     t_cur_executor->terminal();
 }
 
+
 Executor::~Executor() {
     if (UNLIKELY(this == t_main_executor.get()))
         // 不能使用logger, 因为此时主协程正在析构.
@@ -69,8 +90,10 @@ Executor::~Executor() {
 
     if (stack_)
         free(stack_);
+#if LON_CONTEXT_TYPE == COROUTINE_UCONTEXT
     if(context_)
         delete context_;
+#endif
 }
 
 void Executor::exec() {
@@ -129,17 +152,30 @@ void Executor::reset(ExectutorFunc func, bool back_to_caller) {
         makeContext();
 }
 
-void Executor::swapContext(Executor* dst, Executor* src) {
-    if (UNLIKELY(swapcontext(dst->context_, src->context_))) {
+void Executor::swapContext(Executor* src, Executor* dst) {
+#if LON_CONTEXT_TYPE == COROUTINE_UCONTEXT
+    if (UNLIKELY(swapcontext(src->context_, dst->context_))) {
         LON_LOG_FATAL(G_logger)
             << "swap context failed, executor id:" << src->id_ << ';'
             << dst->id_ << "stack:\n" << backtraceString();
     }
+#elif  LON_CONTEXT_TYPE == COROUTINE_FCONTEXT
+    auto transfer = boost::context::detail::jump_fcontext(dst->context_, src);
+    dst->context_ = transfer.fctx;
+#endif
+
 }
 
 void Executor::initToReady() {
     makeContext();
     state_ = State::Ready;
+}
+
+void Executor::newContext() {
+#if LON_CONTEXT_TYPE == COROUTINE_UCONTEXT
+    context_ = new struct ucontext_t;
+#elif  LON_CONTEXT_TYPE == COROUTINE_FCONTEXT
+#endif
 }
 
 void Executor::makeContext() {
@@ -149,17 +185,46 @@ void Executor::makeContext() {
     if (stack_)
         free(stack_);
     else
-        stack_ = malloc(stack_size_);
-    context_ = new struct ucontext_t;
+        stack_ = static_cast<unsigned char*>(malloc(stack_size_));
+    newContext();
     getCurrentContext();
-    context_->uc_link          = nullptr;
-    context_->uc_stack.ss_sp   = stack_;
+#if LON_CONTEXT_TYPE == COROUTINE_UCONTEXT
+    context_->uc_link = nullptr;
+    context_->uc_stack.ss_sp = stack_;
     context_->uc_stack.ss_size = stack_size_;
 
-
     makecontext(context_, &executorMainFunc, 0);
+#elif  LON_CONTEXT_TYPE == COROUTINE_FCONTEXT
+   auto stack_base = stack_ + stack_size_;
+    context_ =
+        boost::context::detail::make_fcontext(stack_base, stack_size_, &executorMainFunc);
+#endif
+
 }
 
+void Executor::getCurrentContext() {
+#if LON_CONTEXT_TYPE == COROUTINE_UCONTEXT
+    if (UNLIKELY(getcontext(context_))) {
+        LON_LOG_ERROR(G_logger) << "get context failed" << backtraceString();
+    }
+#elif  LON_CONTEXT_TYPE == COROUTINE_FCONTEXT
+#endif
+
+}
+
+void Executor::resetContext() {
+    bzero(stack_, stack_size_);
+#if LON_CONTEXT_TYPE == COROUTINE_UCONTEXT
+    context_->uc_link = nullptr;
+    context_->uc_stack.ss_sp = stack_;
+    context_->uc_stack.ss_size = stack_size_;
+
+    makecontext(context_, &executorMainFunc, 0);
+#elif  LON_CONTEXT_TYPE == COROUTINE_FCONTEXT
+    auto stack_base = stack_ + stack_size_;
+    boost::context::detail::make_fcontext(stack_base, stack_size_, &executorMainFunc);
+#endif
+}
 
 void Executor::setMainExecutor(Executor::Ptr executor) {
     t_main_executor = executor;
@@ -182,6 +247,9 @@ void Executor::mainExecInner() {
 
 void Executor::mainYieldInner() {
     t_cur_executor = t_base_executor;
+#if LON_CONTEXT_TYPE == COROUTINE_FCONTEXT
+    fixStackUnwinding();
+#endif
     swapContext(this, t_base_executor.get());
 }
 void Executor::doExec(bool main) {
@@ -231,6 +299,8 @@ size_t Executor::totalExecutorCount() {
     return executor_count;
 }
 
+
+
 void Executor::execInner() {
     t_cur_executor = this->shared_from_this();
     swapContext(t_main_executor.get(), this);
@@ -238,6 +308,9 @@ void Executor::execInner() {
 
 void Executor::yieldInner() {
     t_cur_executor = t_main_executor;
+#if LON_CONTEXT_TYPE == COROUTINE_FCONTEXT
+    fixStackUnwinding();
+#endif
     swapContext(this, t_cur_executor.get());
 }
 
@@ -246,21 +319,7 @@ void Executor::terminalInner() {
     swapContext(this, t_cur_executor.get());
 }
 
-void Executor::getCurrentContext() {
-    if (UNLIKELY(getcontext(context_))) {
-        LON_LOG_ERROR(G_logger) << "get context failed" << backtraceString();
-    }
-}
 
-void Executor::resetContext() {
-    bzero(stack_, stack_size_);
-    context_->uc_link          = nullptr;
-    context_->uc_stack.ss_sp   = stack_;
-    context_->uc_stack.ss_size = stack_size_;
-
-
-    makecontext(context_, &executorMainFunc, 0);
-}
 
 }  // namespace coroutine
 

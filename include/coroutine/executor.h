@@ -1,17 +1,29 @@
 ﻿#pragma once
 #include "base/macro.h"
 #include "base/typedef.h"
-#include "executor.h"
+#include "cmake_defination.h"
 
 #include <cassert>
 #include <functional>
 #include <memory>
+#if LON_CONTEXT_TYPE == COROUTINE_UCONTEXT
 #include <ucontext.h>
-
+#elif  LON_CONTEXT_TYPE == COROUTINE_FCONTEXT
+#include <boost/context/detail/fcontext.hpp>
+#endif
 
 namespace lon {
 
 namespace coroutine {
+    // ucontext_t缺点:  ucontext_t的上下文切换比fcontext_t多占用两个数量级的CPU周期;
+    // ucontext_t原本设计用于多线程切换的, 所以保存了信号掩码, 而协程其实不用.
+
+#if LON_CONTEXT_TYPE == COROUTINE_UCONTEXT
+    using ContextType = ucontext_t *;
+#elif  LON_CONTEXT_TYPE == COROUTINE_FCONTEXT
+    using ContextType = boost::context::detail::fcontext_t;
+#endif
+
 namespace executor_info {
 size_t idGenerate();
 void releaseId(size_t id);
@@ -57,7 +69,7 @@ public:
           id_{executor_info::idGenerate()},
           stack_size_{0},
           stack_{nullptr} {
-        context_ = new struct ucontext_t;
+        newContext();
         getCurrentContext();
         executor_info::createUpdateData();
     }
@@ -150,33 +162,35 @@ private:
     // two executor in same thread.
     static void swapContext(Executor* dst, Executor* src);
     void initToReady();
+    void newContext();
     void makeContext();
-
+    void getCurrentContext();
+    void resetContext();
 
     static size_t totalExectutors();
     static size_t getCurrentId();
     static size_t totalExecutorCount();
-
+#if LON_CONTEXT_TYPE == COROUTINE_UCONTEXT
     static void executorMainFunc();
+#elif  LON_CONTEXT_TYPE == COROUTINE_FCONTEXT
+    void fixStackUnwinding();
+    static void executorMainFunc(boost::context::detail::transfer_t transfer);
+#endif
+    
 
     void execInner();
     void yieldInner();
     void terminalInner();
-
-    void getCurrentContext();
-
-    void resetContext();
-
 private:
     bool is_call_back_type_ = false;
     State state_;
     size_t id_;
     size_t stack_size_;
-    void* stack_;  // 执行单元的栈.
+    unsigned char* stack_;  // 执行单元的栈.
     ExectutorFunc callback_;
     // ucontext 的size大约是1KB, 使用指针而不是直接作为成员,
     // 这样的话处于init状态的executor可以很大程度上减少内存消耗.
-    ucontext_t* context_{nullptr};
+    ContextType context_{nullptr};
 };
 
 

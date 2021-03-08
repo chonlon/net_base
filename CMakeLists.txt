@@ -4,6 +4,7 @@ project(net_base)
 
 option(EnableTests "BUILD TESTS" ON)
 option(EnableRunner "BUILD RUNNER" ON)
+option(EnableBoostContext "using boost context" ON)
 
 include(cmake/AddExe.cmake)
 include(cmake/utils.cmake)
@@ -57,6 +58,7 @@ find_package(fmt CONFIG REQUIRED)
 find_package(yaml-cpp CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
+
 set(
     NET_BASE_SRC
     src/logger.cpp
@@ -89,6 +91,21 @@ set(
     pthread
     dl
 )
+
+#设置协程使用切换上下文的库.
+set(LON_CONTEXT_TYPE "COROUTINE_UCONTEXT")
+if(EnableBoostContext)
+    message("using boost context as coroutine context")
+    find_package(Boost 1.61 COMPONENTS context REQUIRED)
+    set(
+        NET_BASE_LIB
+        ${NET_BASE_LIB}
+        Boost::context
+    )
+    set(LON_CONTEXT_TYPE "COROUTINE_FCONTEXT")
+endif()
+
+configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake/cmake_defination.h.in ${CMAKE_CURRENT_LIST_DIR}/include/cmake_defination.h)
 
 if(EnableStaticLibBuild)
     add_library(net_base_static STATIC)

@@ -83,3 +83,6 @@ ui*.h
 
 #ignore node_models
 *node_modules*
+
+#ignore cmake gen header
+include/cmake*.h
