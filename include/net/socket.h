@@ -15,6 +15,15 @@ namespace lon::net {
             : fd_{_fd} {
         }
 
+        /**
+         * @brief construct Socket, wrap to ::socket function.
+         * @param _domain same to ::socket function.
+         * @param _type same to ::socket function.
+         * @param _protocol  same to ::socket function.
+         * @throw ExecFailed if ::socket return -1.
+        */
+        Socket(int _domain, int _type, int _protocol);
+
         ~Socket() = default;
 
         Socket(const Socket& _other) = default;

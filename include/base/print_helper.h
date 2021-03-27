@@ -17,50 +17,12 @@
 ///////////////////////////////////////////////
 // functions
 ///////////////////////////////////////////////
-#ifdef __linux__
-#include <sys/ioctl.h>
-#include <unistd.h>
-namespace lon {
-
-
-    inline int lon_window_width = -1;
-
-    inline int getWinWidth() {
-        if(lon_window_width == -1) {
-            struct winsize w;
-            ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-
-            lon_window_width = w.ws_row;
-        }
-        return lon_window_width;
-    }
-}
-#else
-#include <windows.h>
-namespace lon {
-
-
-    inline int lon_window_width = -1;
-
-    int getWinWidth() {
-        if (lon_window_width == -1) {
-            CONSOLE_SCREEN_BUFFER_INFO csbi;
-
-            GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-            lon_window_width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-        }
-        return lon_window_width;
-    }
-}
-#endif
 
 inline void printDividing() {
     std::cout << "=======================================\n";
 }
 
 inline void printDividing(const std::string& s) {
-    // size_t width = s.size() + 10 > static_cast<size_t>(lon::getWinWidth()) ? s.size() + 20 : lon::getWinWidth();
-    // size_t side_width = (width - s.size()) / 2;
     size_t side_width = 10;
     std::cout << std::string(side_width,'=') << s << std::string(side_width, '=') << '\n';
 }
@@ -157,15 +119,6 @@ inline void doPrint(const ContainerType &v)
     std::cout << '}';
 }
 
-// template <typename ContainerType, typename = typename ContainerType::value_type>
-// inline void doPrint(const ContainerType& v) {
-//     for (const auto& i : v) {
-//         doPrint(i);
-//         std::cout << ' ';
-//         // 还是不满意... 怎么针对多层使用不同的分隔符呢
-//     }
-//     std::cout << '\n';
-// }
 
 template <typename ContainerType, typename = typename ContainerType::value_type>
 inline void doPrintContainer(const ContainerType& v) {
