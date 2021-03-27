@@ -121,9 +121,10 @@ private:
         bool insertFront(Executor::Ptr executor) {
             auto new_node = new Node(executor, nullptr);
             auto old_head = head.load(std::memory_order_relaxed);
-
-            new_node->next = old_head;
-            head.compare_exchange_strong(old_head, new_node, std::memory_order_release, std::memory_order_relaxed);
+            do{
+                new_node->next = old_head;  
+            } while(!head.compare_exchange_strong(old_head, new_node, std::memory_order_release, std::memory_order_relaxed));
+            
             return old_head == nullptr;
         }
 
