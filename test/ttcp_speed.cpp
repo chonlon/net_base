@@ -63,7 +63,7 @@ void client() {
     ::free(payload);
     ::close(sockfd);
     double seconds = static_cast<double>(time_span) / 1000.0;
-    fmt::print("{:.3f} seconds, {:.3f} Mib/s", seconds, total_mb / seconds);
+    fmt::print("{:.3f} seconds, {:.3f} Mib/s\n", seconds, total_mb / seconds);
     // connection->send();
     if (async)
         lon::io::IOManager::getThreadLocal()->stop();
@@ -102,7 +102,7 @@ void server() {
         }
         payload->length = ntohl(payload->length);
         assert(payload->length == sessionMessage.length);
-        if (connection->recv(payload->data, payload->length) != payload->length) //ÕâÀïÖ±½ÓÓÃµÄrecv, ËùÒÔÈç¹û³¬¹ımtu, tcp½«Êı¾İ°ü²ğ¿ª»á³ö´í(client»á»Øµ½rst).
+        if (connection->recv(payload->data, payload->length) != payload->length) //è¿™é‡Œç›´æ¥ç”¨çš„recv, æ‰€ä»¥å¦‚æœè¶…è¿‡mtu, tcpå°†æ•°æ®åŒ…æ‹†å¼€ä¼šå‡ºé”™(clientä¼šå›åˆ°rst).
         {
             fmt::print("read payload data\n");
             exit(1);

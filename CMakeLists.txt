@@ -96,7 +96,7 @@ set(
 #设置协程使用切换上下文的库.
 set(LON_CONTEXT_TYPE "COROUTINE_UCONTEXT")
 if(EnableBoostContext)
-    message("using boost context as coroutine context")
+    message(STATUS "using boost context as coroutine context")
     find_package(Boost 1.61 COMPONENTS context REQUIRED)
     set(
         NET_BASE_LIB
@@ -109,26 +109,49 @@ endif()
 configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake/cmake_defination.h.in ${CMAKE_CURRENT_LIST_DIR}/include/cmake_defination.h)
 
 
-if(EnableStaticLibBuild)
-    add_library(net_base_static STATIC)
-    target_include_directories(net_base_static PUBLIC "include")
-    target_include_directories(net_base_static PRIVATE "src")
-    target_sources(net_base_static PRIVATE ${NET_BASE_SRC})
-    target_link_libraries(net_base_static PUBLIC ${NET_BASE_LIB})
-endif()
-if(EnableDynamicLibBuild)
-    add_library(net_base_dynamic SHARED)
-    target_include_directories(net_base_dynamic PUBLIC "include")
-    target_include_directories(net_base_dynamic PRIVATE "src")
-    target_link_libraries(net_base_dynamic PUBLIC ${NET_BASE_LIB})
-    target_sources(net_base_dynamic PRIVATE ${NET_BASE_SRC})
-endif()
 
 add_library(net_base OBJECT)
+target_compile_definitions(net_base PUBLIC OBJ)
 target_include_directories(net_base PUBLIC "include")
 target_include_directories(net_base PRIVATE "src")
 target_link_libraries(net_base PUBLIC ${NET_BASE_LIB})
 target_sources(net_base PRIVATE ${NET_BASE_SRC})
+if(EnableDynamicLibBuild)
+    set_target_properties(net_base PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
+if(EnableStaticLibBuild)
+    add_library(net_base_static STATIC $<TARGET_OBJECTS:net_base>)
+    target_link_libraries(net_base_static PUBLIC net_base)
+    set_target_properties(net_base_static PROPERTIES OUTPUT_NAME net_base CLEAN_DIRECT_OUTPUT 1)
+    install(TARGETS net_base_static
+            RUNTIME DESTINATION bin
+            LIBRARY DESTINATION lib${LIBSUFFIX}
+            ARCHIVE DESTINATION lib${LIBSUFFIX}
+        )
+endif()
+
+if(EnableDynamicLibBuild)
+    add_library(net_base_dynamic SHARED $<TARGET_OBJECTS:net_base>)
+    target_link_libraries(net_base_dynamic PUBLIC net_base)
+    set_target_properties(net_base_dynamic PROPERTIES OUTPUT_NAME net_base CLEAN_DIRECT_OUTPUT 1)
+    install(
+            TARGETS net_base_dynamic
+            RUNTIME DESTINATION bin
+            LIBRARY DESTINATION lib${LIBSUFFIX}
+            ARCHIVE DESTINATION lib${LIBSUFFIX}
+            )
+endif()
+
+if(EnableDynamicLibBuild OR EnableStaticLibBuild)
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
+    DESTINATION include/net_base
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "*.hpp"
+    )
+endif()
+
 
 configure_file("bin/conf/main.json" "${EXECUTABLE_OUTPUT_PATH}/conf/main.json" COPYONLY)
 
