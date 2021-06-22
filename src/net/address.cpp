@@ -115,7 +115,7 @@ sa_family_t SockAddress::getFamily() const noexcept {
     return getAddr()->sa_family;
 }
 
-sa_family_t SockAddress::isInetFamily() const noexcept {
+bool SockAddress::isInetFamily() const noexcept {
     return getFamily() == AF_INET ? true : getFamily() == AF_INET6 ? true : false;
 }
 

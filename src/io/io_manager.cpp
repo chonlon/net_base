@@ -219,10 +219,9 @@ void IOManager::blockPending() {
                 }
                 
             }
-
-            // 执行.
+            // enqueue executor.
             // addExecutor 必定成功.
-            if (ep_event.events & EPOLLIN) {
+            if (ep_event.events & (EPOLLIN | EPOLLERR | EPOLLHUP)) {
                 [[maybe_unused]] bool add_ret = scheduler_.addExecutor(
                     fd_events_[ep_event.data.fd].read_executor);
 
@@ -231,7 +230,7 @@ void IOManager::blockPending() {
                 }
                 assert(add_ret);
             }
-            if (ep_event.events & EPOLLOUT) {
+            if (ep_event.events & (EPOLLIN | EPOLLERR | EPOLLHUP)) {
                 [[maybe_unused]] bool add_ret = scheduler_.addExecutor(
                     fd_events_[ep_event.data.fd].write_executor);
 

@@ -27,7 +27,7 @@ public:
     sa_family_t getFamily() const noexcept;
 
     LON_NODISCARD
-    sa_family_t isInetFamily() const noexcept;
+    bool isInetFamily() const noexcept;
 
     /**
      * @brief 对应的原生sockaddr指针, 如果未初始化返回地址类型为 AF_UNSPEC.

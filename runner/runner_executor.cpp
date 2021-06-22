@@ -46,6 +46,11 @@ void runScheduler() {
         }));
         fmt::print("----{}-----\n", i);
     }
+
+    scheduler.addExecutor(std::make_shared<lon::coroutine::Executor>([&scheduler](){
+        scheduler.stop();
+    }));
+
     scheduler.run();
     std::this_thread::sleep_for(2s);
     scheduler.stop();
