@@ -1,5 +1,5 @@
 #pragma once
-#include "base/expection.h"
+#include "../base/expection.h"
 
 namespace lon {
 namespace config {

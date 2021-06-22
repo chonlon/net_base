@@ -1,7 +1,7 @@
 #pragma once
-#include "logger.h"
-#include "base/typedef.h"
-#include "logging/logger_flusher.h"
+#include "../logger.h"
+#include "../base/typedef.h"
+#include "logger_flusher.h"
 
 
 #include <yaml-cpp/yaml.h>
@@ -45,7 +45,7 @@ namespace YAML {
 
 
             // if (node["frequency"].IsDefined()) {
-            //     rhs.frequency = lon::log::FlushFrequency::Day; //Ä¬ÈÏ°´Ìì
+            //     rhs.frequency = lon::log::FlushFrequency::Day; //Ä¬ï¿½Ï°ï¿½ï¿½ï¿½
             // }
             // else {
             //     rhs.frequency = /*from str*/
@@ -88,7 +88,7 @@ namespace YAML {
             }
 
             if(!node["level"].IsDefined()) {
-                rhs.level = lon::DEBUG; //Ä¬ÈÏ×îµÍ
+                rhs.level = lon::DEBUG; //Ä¬ï¿½ï¿½ï¿½ï¿½ï¿½
             } else {
                 rhs.level = lon::Logger::levelFromString(node["level"].as<lon::String>());
             }

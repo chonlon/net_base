@@ -1,8 +1,8 @@
 ﻿#pragma once
-#include "balancer/io/simple_balancer.h"
-#include "base/nocopyable.h"
+#include "../../balancer/io/simple_balancer.h"
+#include "../../base/nocopyable.h"
+#include "../../io/io_manager.h"
 #include "connection.h"
-#include "io/io_manager.h"
 #include "net/socket.h"
 #include <functional>
 

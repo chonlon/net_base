@@ -1,7 +1,7 @@
 ﻿#pragma once
-#include "base/macro.h"
-#include "base/singleton.h"
-#include "base/typedef.h"
+#include "../base/macro.h"
+#include "../base/singleton.h"
+#include "../base/typedef.h"
 #include <cstdlib>
 #include <cstring>
 #include <vector>

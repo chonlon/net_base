@@ -1,8 +1,8 @@
 #pragma once
 
 #include "expection.h"
-#include "base/typedef.h"
-#include "base/macro.h"
+#include "typedef.h"
+#include "macro.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <iostream>

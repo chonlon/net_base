@@ -1,7 +1,7 @@
 #pragma once
-#include "base/singleton.h"
-#include "logger.h"
-#include "base/typedef.h"
+#include "../base/singleton.h"
+#include "../logger.h"
+#include "../base/typedef.h"
 
 // #include "base/lstring.h"
 

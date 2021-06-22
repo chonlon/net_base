@@ -1,7 +1,7 @@
 ﻿#pragma once
-#include "base/macro.h"
-#include "base/typedef.h"
-#include "cmake_defination.h"
+#include "../base/macro.h"
+#include "../base/typedef.h"
+#include "../cmake_defination.h"
 
 #include <cassert>
 #include <functional>

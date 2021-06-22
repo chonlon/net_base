@@ -1,6 +1,6 @@
 #pragma once
-#include "base/nocopyable.h"
-#include "base/typedef.h"
+#include "../base/nocopyable.h"
+#include "../base/typedef.h"
 
 namespace lon {
 

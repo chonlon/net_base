@@ -1,9 +1,9 @@
 #pragma once
-#include "base/file.h"
-#include "base/nocopyable.h"
-#include "base/singleton.h"
-#include "base/typedef.h"
-#include "logging/logger_filename.h"
+#include "../base/file.h"
+#include "../base/nocopyable.h"
+#include "../base/singleton.h"
+#include "../base/typedef.h"
+#include "logger_filename.h"
 
 
 #include <iostream>

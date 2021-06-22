@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "balancer.h"
-#include "io/io_manager.h"
+#include "../../io/io_manager.h"
 
 #include <random>
 

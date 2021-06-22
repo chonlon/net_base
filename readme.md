@@ -9,12 +9,14 @@
 
  git clone https://github.com/fmtlib/fmt.git
  mkdir build && cd build && make install
+
+ sudo apt install  -y libboost-context-dev
 ```
 - build & install
 ```
     $ mkdir build
     $ cd build
-    $ cmake .. [-DEnableTests=off] [-DEnableRunner=off]
+    $ cmake .. [-DEnableTests=off] [-DEnableRunner=off] [-DEnableStaticLibBuild=ON] [-DEnableDynamicLibBuild=ON]
     $ make
     $ make install
 ```
@@ -27,6 +29,7 @@
 ## TODO
 ### logger
 - 定时切换/定时flush
+- logger 的stringstream复用或者使用专门设计的buffer, 避免频繁申请/释放内存降低性能
 ### 协程
 - n:m协程模型
 - work steal

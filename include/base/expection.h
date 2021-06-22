@@ -1,7 +1,7 @@
 #pragma once
 #include <exception>
-#include <base/typedef.h>
-#include <base/lstring.h>
+#include "typedef.h"
+#include "lstring.h"
 
 namespace lon {
     /**
