@@ -48,20 +48,28 @@ ssize_t ioInner(int fd,
                 // exec failed.
                 auto time_out_ptr = std::make_shared<bool>(false);
                 std::weak_ptr<bool> time_out_weak_ptr = time_out_ptr;
+                auto current = coroutine::Executor::getCurrent();
 
+                //注册定时器, 超时执行
                 Timer::Ptr timer = std::make_shared<Timer>(
                     time_out_ms,
-                    [io_manager, fd, event_type, time_out_weak_ptr]() {
+                    [io_manager, fd, event_type, time_out_weak_ptr, current]() {
                         auto is_time_out = time_out_weak_ptr.lock();
                         if (is_time_out && !*is_time_out) {
                             io_manager->removeEvent(fd, event_type);
                             *is_time_out = true;
                         }
+                        
+                        // go back to ioInner(return error)
+                        io_manager->addExecutor(current);
                     });
                 io_manager->registerTimer(timer);
                 io_manager->registerEvent(
-                    fd, event_type, coroutine::Executor::getCurrent());
-                coroutine::Executor::getCurrent()->yield();
+                    fd, event_type, current);
+
+                // 挂起协程
+                current->yield();
+
                 if (*time_out_ptr) {
                     LON_LOG_WARN(G_Logger)
                         << fmt::format("{} invoke timeout with fd:{}",
