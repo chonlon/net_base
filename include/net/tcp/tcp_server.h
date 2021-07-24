@@ -26,7 +26,7 @@ public:
               std::unique_ptr<io::IOWorkBalancer> _balancer =
                   std::make_unique<io::SimpleIOBalancer>());
 
-    ~TcpServer();
+    virtual ~TcpServer();
 
     /**
      * @brief 设置listen socket.

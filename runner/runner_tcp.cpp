@@ -37,7 +37,8 @@ void runServerBinds() {
         std::make_shared<IPV4Address>("127.0.0.1", 22302),
         std::make_shared<IPV4Address>("127.0.0.1", 22303),
     });
-    // run netstat -atp | 223.
+
+    // run netstat -atp | grep 223.
     sleep(10);
 }
 

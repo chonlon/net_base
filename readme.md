@@ -2,13 +2,13 @@
 - deps
 ``` shell
  git clone https://github.com/jbeder/yaml-cpp.git
- mkdir build && cd build && make install
+ mkdir build && cd build && cmake .. && make install
 
  git clone https://github.com/nlohmann/json.git
- mkdir build && cd build && make install
+ mkdir build && cd build && cmake .. && make install
 
  git clone https://github.com/fmtlib/fmt.git
- mkdir build && cd build && make install
+ mkdir build && cd build && cmake .. && make install
 
  sudo apt install  -y libboost-context-dev
 ```
