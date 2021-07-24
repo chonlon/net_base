@@ -4,17 +4,19 @@
 #include <iostream>
 #include <algorithm>
 #include "logging/logger_data_convert.h"
+#include "logging/LogSStream.h"
 
 const char* printable = "-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$ % &\'()*+,-./:;<=>?@[\\]^_`{|}~";
 
-int main() {
+void testLog() {
+    CaseMarker marker(__FUNCTION__ );
     using namespace lon;
     std::cout
-        << Logger::levelToString(Level::DEBUG) << '\n'
-        << Logger::levelToString(Level::INFO) << '\n'
-        << Logger::levelToString(Level::ERROR) << '\n'
-        << Logger::levelToString(Level::FATAL) << '\n'
-        << Logger::levelToString(Logger::levelFromString("WARN")) << '\n';
+            << Logger::levelToString(Level::DEBUG) << '\n'
+            << Logger::levelToString(Level::INFO) << '\n'
+            << Logger::levelToString(Level::ERROR) << '\n'
+            << Logger::levelToString(Level::FATAL) << '\n'
+            << Logger::levelToString(Logger::levelFromString("WARN")) << '\n';
 
     auto logger = std::make_shared<Logger>("test");
     logger->addOneFlusher(std::make_unique<log::SimpleFileFlusher>("/tmp/log1.txt"));
@@ -47,4 +49,19 @@ int main() {
     auto data2 = config.get<std::vector<detail::LogConfigData>>("logs");
     std::cout << data2[0].name;
 
+}
+
+void testLogSStream() {
+    CaseMarker marker(__FUNCTION__ );
+    using namespace lon::log;
+
+    LogSStream ss;
+    ss << 1 << 2 << '3' << "456" << 7.8;
+    std::cout << ss.str() << '\n';
+}
+
+int main() {
+
+    testLogSStream();
+    testLog();
 }

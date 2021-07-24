@@ -54,7 +54,7 @@ void Logger::log(LogEvent* event) noexcept {
         i(ss, event);
     }
     for (int i = 0; i < flusher_count_; ++i) {
-        flushers_[i]->flush(ss.str());
+        flushers_[static_cast<unsigned long>(i)]->flush(ss.getSlice());
     }
 }
 

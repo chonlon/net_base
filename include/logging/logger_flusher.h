@@ -37,7 +37,11 @@ public:
      * \param str
      * 输出至log文件
      */
-    virtual void flush(const String& str) = 0;
+    void flush(const String& str) {
+        flush(StringPiece(str));
+    }
+
+    virtual void flush(StringPiece str) = 0;
 
 
     virtual void setFilePattern(const String& pattern) = 0;
@@ -59,10 +63,10 @@ public:
 
     virtual ~AsyncFlusher() = default;
 
-    void flush(const String& str) {
+    void flush(StringPiece str) {
         {
             std::lock_guard<Mutex> locker{mutex_};
-            log_pool_.push(str);
+            log_pool_.push(String(str));
         }
         condition_var_.notify_one();
     }
@@ -159,7 +163,8 @@ class SimpleStdoutFlusher
 public:
     ~SimpleStdoutFlusher() override {}
 
-    void flush(const String& str) override {
+
+    void flush(StringPiece str) override {
         std::cout << str;
     }
 
@@ -183,11 +188,11 @@ public:
     ~SimpleFileFlusher() override {}
 
 #if LON_USING_C_FILE
-    void flush(const String& str) override {
+    void flush(StringPiece str) override {
         ::fwrite(str.c_str(), str.size(), 1, file_);
     }
 #else
-    void flush(const String& str) override {
+    void flush(StringPiece str) override {
         file_.append(str);
     }
 #endif
@@ -204,7 +209,7 @@ class ProtectedStdoutFlusher
 public:
     ~ProtectedStdoutFlusher() override {}
 
-    void flush(const String& str) override {
+    void flush(StringPiece str) override {
         std::lock_guard<Mutex> locker{mutex_};
         std::cout << str;
     }
@@ -230,12 +235,12 @@ public:
     ~ProtectedFileFlusher() override {}
 
 #if LON_USING_C_FILE
-    void flush(const String& str) override {
+    void flush(StringPiece str) override {
         std::lock_guard<Mutex> locker{mutex_};
         ::fwrite(str.c_str(), str.size(), 1, file_);
     }
 #else
-    void flush(const String& str) override {
+    void flush(StringPiece str) override {
         std::lock_guard<Mutex> locker{mutex_};
         file_.append(str);
     }
@@ -273,7 +278,7 @@ public:
         thread_.join();
     }
 
-    void flush(const String& str) override {
+    void flush(StringPiece str) override {
         AsyncFlusher::flush(str);
     }
 
@@ -301,7 +306,7 @@ public:
     AsyncFileLogFlusher(const String& pattern) : FileFlusher{pattern} {}
 
 
-    void flush(const String& str) override {
+    void flush(StringPiece str) override {
         AsyncFlusher::flush(str);
     }
 
@@ -370,7 +375,7 @@ struct StringFlusher
 {
     String log;
 
-    void flush(const String& str) override {
+    void flush(StringPiece str) override {
         log.append(str);
     }
     void setFilePattern(const String& pattern) override {}

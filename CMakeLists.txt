@@ -80,6 +80,7 @@ set(
     src/net/tcp/tcp_server.cpp
     src/balancer/io/avg_balancer.cpp
     src/balancer/io/prio_balancer.cpp
+    src/logging/LogSStream.cpp
 )
 
 set(

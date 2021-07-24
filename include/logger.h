@@ -4,6 +4,7 @@
 #include "base/lstring.h"
 #include "base/typedef.h"
 #include "logging/logger_flusher.h"
+#include "logging/LogSStream.h"
 #include <algorithm>
 #include <array>
 #include <assert.h>
@@ -60,7 +61,7 @@ enum Level
 
 struct LogEvent
 {
-    using StringStream = std::stringstream;
+    using StringStream = log::LogSStream;
 
 
     const char* file_name;  // using string_view to save size?
@@ -118,7 +119,7 @@ class Logger : public std::enable_shared_from_this<Logger>
     friend _LogManager;
 
 public:
-    using StringStream  = std::stringstream;
+    using StringStream  = LogEvent::StringStream;
     using ptr           = std::shared_ptr<Logger>;
     using FormatterFunc = std::function<void(StringStream& stream, LogEvent*)>;
     // noexcept

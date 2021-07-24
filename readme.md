@@ -29,7 +29,7 @@
 ## TODO
 ### logger
 - 定时切换/定时flush
-- logger 的stringstream复用或者使用专门设计的buffer, 避免频繁申请/释放内存降低性能
+- logger 的stringstream复用或者使用专门设计的buffer, 避免频繁申请/释放内存降低性能[done]
 ### 协程
 - n:m协程模型
 - work steal
