@@ -26,6 +26,8 @@ void runServer() {
     server->bind(std::make_shared<IPV4Address>("127.0.0.1", 22225));
     server->startServe();
     // run nc localhost 22225.
+
+    IOManager::getThreadLocal()->stop();
 }
 
 void runServerBinds() {
@@ -46,6 +48,6 @@ int main() {
     lon::io::setHookEnabled(true);
     IOManager::getThreadLocal()->addExecutor(std::make_shared<lon::coroutine::Executor>(runServerBinds));
     IOManager::getThreadLocal()->addExecutor(std::make_shared<lon::coroutine::Executor>(runServer));
-    
+
     IOManager::getThreadLocal()->run();
 }

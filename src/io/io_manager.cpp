@@ -230,7 +230,7 @@ void IOManager::blockPending() {
                 }
                 assert(add_ret);
             }
-            if (ep_event.events & (EPOLLIN | EPOLLERR | EPOLLHUP)) {
+            if (ep_event.events & (EPOLLOUT | EPOLLERR | EPOLLHUP)) {
                 [[maybe_unused]] bool add_ret = scheduler_.addExecutor(
                     fd_events_[ep_event.data.fd].write_executor);
 

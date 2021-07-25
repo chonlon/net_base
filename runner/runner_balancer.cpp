@@ -90,6 +90,8 @@ void runPrio() {
             connection->getSocket().close();
         }), prio);
     }
+
+    IOManager::getThreadLocal()->stop();
 }
 
 void multiClient() {
@@ -108,6 +110,7 @@ void multiClient() {
             connection->recv(buf, 1024);
         }
     }
+    IOManager::getThreadLocal()->stop();
 }
 
 int main() {
