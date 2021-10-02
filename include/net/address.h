@@ -48,7 +48,7 @@ public:
     bool operator==(const SockAddress& rhs) const;
     bool operator!=(const SockAddress& rhs) const;
 
-
+    friend std::ostream& operator<<(std::ostream& os, lon::net::SockAddress const& address);
 };
 
 
